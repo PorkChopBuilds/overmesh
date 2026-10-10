@@ -71,16 +71,18 @@ def defined_names(js: str) -> set[str]:
 
 
 def missing_handler_names(text: str, defined: set[str]) -> set[str]:
-    """Handler names in `text` whose function is not defined and is not a built-in or a method call."""
+    """Handler names in `text` whose function is not defined and is not a built-in or a method call.
+
+    EST-83 I1: it scans EVERY call in the handler (finditer), not just the first
+    (search) — `switchTab('settings'); switchMissingTab('app')` must be caught too.
+    """
     missing: set[str] = set()
     for _q, body in _ON.findall(strip_comments(text)):
-        m = _CALL.search(body)
-        if not m:
-            continue
-        name = m.group(1)
-        if name in BUILTINS or name in defined:
-            continue
-        missing.add(name)
+        for m in _CALL.finditer(body):
+            name = m.group(1)
+            if name in BUILTINS or name in defined:
+                continue
+            missing.add(name)
     return missing
 
 
@@ -94,13 +96,25 @@ class TestNoDeadHandlers(unittest.TestCase):
         self.assertEqual(missing_handler_names("onclick=\"document.getElementById('x').value=''\"", set()), set())
         self.assertEqual(missing_handler_names('onclick="leafletMap.closePopup()"', set()), set())
         # ...a built-in must not...
-        self.assertEqual(missing_handler_names('onclick="setTimeout(() => f(), 100)"', set()), set())
+        self.assertEqual(missing_handler_names('onclick="setTimeout(() => later(), 100)"', {"later"}), set())
         # ...and a commented-out example must not: this exact line was a false finding.
         self.assertEqual(
             missing_handler_names(
                 '// Safe for embedding in onclick="fn(\'VALUE\')"\nonclick="realOne()"', {"realOne"}
             ),
             set(),
+        )
+
+    def test_the_detector_sees_every_call_in_a_handler(self) -> None:
+        # EST-83 I1: the old detector used _CALL.search and only checked the FIRST
+        # call, so a dead 2nd/3rd call slipped through. This is the regression.
+        self.assertEqual(
+            missing_handler_names('onclick="ok(); totallyMissingSecond()"', {"ok"}),
+            {"totallyMissingSecond"},
+        )
+        self.assertEqual(
+            missing_handler_names('onclick="a(); b(); missingThird()"', {"a", "b"}),
+            {"missingThird"},
         )
 
     def test_no_page_has_a_dead_inline_handler(self) -> None:
