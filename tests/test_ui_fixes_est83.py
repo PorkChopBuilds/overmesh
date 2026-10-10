@@ -203,5 +203,39 @@ class TestCrossSystemRemoved(unittest.TestCase):
                          "H1: the project-structure table must not list a deleted file")
 
 
+class TestUnreferencedLibsRemoved(unittest.TestCase):
+    """H3: two vendored assets looked load-bearing but were referenced nowhere.
+
+    The offline tile layer uses raw indexedDB (app.js), not idb.min.js, and
+    nothing created a Leaflet.Offline layer. A grep across source, templates,
+    tests and docs found only the files' own self-references, so they are gone.
+    """
+
+    GONE = ("static/idb.min.js", "static/leaflet.offline.min.js")
+
+    def test_files_are_deleted(self):
+        for rel in self.GONE:
+            self.assertFalse((ROOT / rel).exists(), f"H3: {rel} must be deleted")
+
+    def test_no_source_still_loads_them(self):
+        offenders = []
+        for path in ROOT.rglob("*"):
+            if not path.is_file():
+                continue
+            if any(part in (".git", "node_modules") for part in path.parts):
+                continue
+            if path == Path(__file__).resolve():     # this guard names them on purpose
+                continue
+            if path.suffix not in (".py", ".js", ".html", ".md", ".json", ".css", ".sh", ".mjs"):
+                continue
+            if path.name == "package-lock.json":
+                continue
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            for rel in self.GONE:
+                if rel in text or rel.split("/")[-1] in text:
+                    offenders.append(f"{path.relative_to(ROOT)} -> {rel}")
+        self.assertEqual(offenders, [], "H3: something still references a deleted asset")
+
+
 if __name__ == "__main__":
     unittest.main()
