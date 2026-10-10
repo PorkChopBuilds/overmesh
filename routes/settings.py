@@ -13,7 +13,7 @@ from flask import Blueprint, jsonify, request
 from config import BASE_DIR, CONFIG, CONFIG_LOCK, DATA_DIR, save_config
 from db import get_auth_setting, set_auth_setting
 from cross import _normalize_rule, get_cross_config
-from helpers import push_to_sse
+from helpers import _as_bool, push_to_sse
 from mesh import connect_node
 from state import chat_lock, chat_messages, connections, connections_lock, mc_connections, mc_connections_lock
 import logging
@@ -714,7 +714,7 @@ def api_settings_nodes_delete(node_id):
 @bp.route("/api/settings/nodes/<node_id>/set_enabled", methods=["POST"])
 def api_settings_nodes_set_enabled(node_id):
     data = request.get_json(silent=True) or {}
-    enabled = bool(data.get("enabled", True))
+    enabled = _as_bool(data.get("enabled", True))
     node = next((n for n in CONFIG["nodes"] if n["id"] == node_id), None)
     if not node:
         return jsonify({"error": "Node not found"}), 404
@@ -837,7 +837,7 @@ def api_settings_app_set():
             "shared_tile_server_enabled",
         ):
             if key in data:
-                CONFIG["app"][key] = bool(data[key])
+                CONFIG["app"][key] = _as_bool(data[key])
         bridge_keys = {
             "bridge_webhooks_enabled",
             "bridge_webhook_urls",
@@ -850,7 +850,7 @@ def api_settings_app_set():
             webhook_cfg = bridge_cfg.setdefault("webhooks", {})
             ingest_cfg = bridge_cfg.setdefault("ingest", {})
             if "bridge_webhooks_enabled" in data:
-                webhook_cfg["enabled"] = bool(data["bridge_webhooks_enabled"])
+                webhook_cfg["enabled"] = _as_bool(data["bridge_webhooks_enabled"])
             if "bridge_webhook_urls" in data:
                 raw_urls = data.get("bridge_webhook_urls") or ""
                 if isinstance(raw_urls, list):
@@ -865,7 +865,7 @@ def api_settings_app_set():
             if "bridge_webhook_secret" in data:
                 webhook_cfg["secret"] = str(data.get("bridge_webhook_secret") or "").strip()
             if "bridge_ingest_enabled" in data:
-                ingest_cfg["enabled"] = bool(data["bridge_ingest_enabled"])
+                ingest_cfg["enabled"] = _as_bool(data["bridge_ingest_enabled"])
             if "bridge_ingest_token" in data:
                 ingest_cfg["token"] = str(data.get("bridge_ingest_token") or "").strip()
             if ingest_cfg.get("enabled") and not ingest_cfg.get("token"):
@@ -1064,7 +1064,7 @@ def api_settings_mc_nodes_remove(node_id):
 @bp.route("/api/settings/mc_nodes/<node_id>/set_enabled", methods=["POST"])
 def api_settings_mc_nodes_set_enabled(node_id):
     data    = request.get_json(silent=True) or {}
-    enabled = bool(data.get("enabled", True))
+    enabled = _as_bool(data.get("enabled", True))
     mc_nodes = CONFIG.get("mc_nodes", [])
     node = next((n for n in mc_nodes if n["id"] == node_id), None)
     if not node:
@@ -1166,7 +1166,7 @@ def api_settings_mc_nodes_path_hash_mode(node_id):
 @bp.route("/api/settings/mc_nodes/<node_id>/force_flood", methods=["POST"])
 def api_settings_mc_nodes_force_flood(node_id):
     data = request.get_json(silent=True) or {}
-    enabled = bool(data.get("force_flood", False))
+    enabled = _as_bool(data.get("force_flood", False))
     with CONFIG_LOCK:
         mc_nodes = CONFIG.get("mc_nodes", [])
         node = next((n for n in mc_nodes if n["id"] == node_id), None)
@@ -1190,7 +1190,7 @@ def api_settings_mc_nodes_auto_add_contacts(node_id):
     Applied to the device immediately when connected; re-asserted on every
     connect."""
     data = request.get_json(silent=True) or {}
-    enabled = bool(data.get("auto_add_contacts", True))
+    enabled = _as_bool(data.get("auto_add_contacts", True))
 
     with CONFIG_LOCK:
         mc_nodes = CONFIG.get("mc_nodes", [])
@@ -1241,7 +1241,7 @@ def api_settings_mc_nodes_auto_add_contacts(node_id):
 @bp.route("/api/settings/mc_nodes/<node_id>/passive_collection", methods=["POST"])
 def api_settings_mc_nodes_passive_collection(node_id):
     data = request.get_json(silent=True) or {}
-    enabled = bool(data.get("passive_collection", True))
+    enabled = _as_bool(data.get("passive_collection", True))
     with CONFIG_LOCK:
         mc_nodes = CONFIG.get("mc_nodes", [])
         node = next((n for n in mc_nodes if n["id"] == node_id), None)
@@ -1442,7 +1442,7 @@ def api_settings_auth_set():
 
     # Toggle enable/disable
     if "auth_enabled" in data:
-        enabled = bool(data["auth_enabled"])
+        enabled = _as_bool(data["auth_enabled"])
         # Don't allow enabling without credentials
         if enabled:
             username = str(data.get("auth_username") or get_auth_setting("auth_username", "") or "").strip()
@@ -1512,7 +1512,7 @@ def api_settings_mt_node_cleanup_set(radio_id):
     except (TypeError, ValueError):
         return jsonify({"error": "days must be a number"}), 400
     days = max(7, min(365, days))
-    enabled = bool(data.get("enabled", data.get("auto_cleanup", False)))
+    enabled = _as_bool(data.get("enabled", data.get("auto_cleanup", False)))
     with CONFIG_LOCK:
         node = next((n for n in CONFIG.get("nodes", []) if n.get("id") == radio_id), None)
         if not node:

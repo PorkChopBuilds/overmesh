@@ -9,6 +9,7 @@ from meshtastic.protobuf import apponly_pb2
 from config import CONFIG, CONFIG_LOCK, save_config
 from db import delete_channel_messages
 from helpers import (
+    _as_bool,
     forget_fixed_node_position,
     get_fixed_node_position,
     mt_node_id_from_num,
@@ -21,17 +22,6 @@ from routes.mc import _qr_svg
 import logging
 log = logging.getLogger(__name__)
 
-
-def _as_bool(value):
-    """Coerce a request value to a bool, avoiding `bool("false") == True`.
-
-    The UI sends real JSON booleans, but anything else talking to these endpoints
-    (curl, Home Assistant, a script) may send the string "false" - which `bool()`
-    happily turns into True. Sweep finding 2026-09-12.
-    """
-    if isinstance(value, str):
-        return value.strip().lower() in ("1", "true", "yes", "on")
-    return bool(value)
 
 bp = Blueprint('radio', __name__)
 

@@ -3,7 +3,7 @@ import logging
 from flask import Blueprint, jsonify, request
 
 from config import CONFIG, CONFIG_LOCK, save_config
-from helpers import push_to_sse
+from helpers import _as_bool, push_to_sse
 from mesh import get_iface_by_radio
 import sense as _sense_mod
 from sense import _active_auto_event, _active_auto_running_lock, _sense_lock, _sense_state
@@ -83,7 +83,7 @@ def api_silent_mode_get():
 @bp.route("/api/silent_mode", methods=["POST"])
 def api_silent_mode_set():
     data = request.get_json(silent=True) or {}
-    enable = bool(data.get("enabled", False))
+    enable = _as_bool(data.get("enabled", False))
     if enable:
         _silent_enable()
     else:

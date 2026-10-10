@@ -10,7 +10,7 @@ from meshtastic.protobuf import mesh_pb2, portnums_pb2
 from config import CONFIG, _valid_node_id
 from db import get_db_nodes, get_position_history, get_prefs_db, get_traceroute_history, save_message, save_traceroute, delete_channel_messages, delete_mt_all_messages, set_node_note, get_mc_note, set_mc_note, get_all_mc_notes, get_favorites, get_ignored
 from helpers import (
-    _format_last_heard, _next_msg_id, _node_ts, _radio_id_for_iface,
+    _as_bool, _format_last_heard, _next_msg_id, _node_ts, _radio_id_for_iface,
     get_node_data, get_node_name, push_to_sse,
 )
 from hw_models import hw_model_name
@@ -662,7 +662,7 @@ def api_traceroute(node_id):
 def api_traceroute_reset():
     """Force-release the traceroute lock if it got stuck (e.g. node disconnected during TR)."""
     data = request.get_json(silent=True) or {}
-    force = bool(data.get("force") or request.args.get("force") in ("1", "true", "yes"))
+    force = _as_bool(data.get("force")) or request.args.get("force") in ("1", "true", "yes")
     with _tr_pending_lock:
         snap = _tr_state_snapshot_locked()
         if snap["active"] and not (force or snap["stale"]):

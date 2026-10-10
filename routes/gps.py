@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 
 from config import CONFIG, CONFIG_LOCK, save_config
+from helpers import _as_bool
 from gps import (
     _gps_push_to_nodes, _gps_start, _gps_start_proxy, _gps_stop,
     gps_lock, gps_port_conflict, gps_port_present, gps_state, _gps_runtime,
@@ -25,7 +26,7 @@ def api_settings_gps_get():
 @bp.route("/api/settings/gps", methods=["POST"])
 def api_settings_gps_set():
     data = request.get_json(silent=True) or {}
-    enabled   = bool(data.get("enabled", CONFIG.get("gps", {}).get("enabled", True)))
+    enabled   = _as_bool(data.get("enabled", CONFIG.get("gps", {}).get("enabled", True)))
     port      = str(data.get("port", "")).strip()
     source    = str(data.get("source", "direct")).strip()
     proxy_url = str(data.get("proxy_url", "http://localhost:8090")).strip() or "http://localhost:8090"
@@ -43,7 +44,7 @@ def api_settings_gps_set():
         cfg["source"]    = source
         cfg["proxy_url"] = proxy_url
         if "auto_push" in data:
-            cfg["auto_push"] = bool(data["auto_push"])
+            cfg["auto_push"] = _as_bool(data["auto_push"])
         if "push_interval" in data:
             try:
                 cfg["push_interval"] = max(10, min(3600, int(data["push_interval"])))

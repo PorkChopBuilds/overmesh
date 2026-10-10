@@ -15,6 +15,24 @@ from state import (
 
 log = logging.getLogger(__name__)
 
+
+# ---------------------------------------------------------------------------
+# Value coercion
+# ---------------------------------------------------------------------------
+
+def _as_bool(value):
+    """Coerce a request value to a bool, avoiding `bool("false") == True`.
+
+    The UI sends real JSON booleans, but anything else talking to these endpoints
+    (curl, Home Assistant, a script) may send the string "false" - which `bool()`
+    happily turns into True. Sweep finding 2026-09-12. Shared by every route that
+    reads a boolean from request JSON (moved here from routes/radio.py, EST-82).
+    """
+    if isinstance(value, str):
+        return value.strip().lower() in ("1", "true", "yes", "on")
+    return bool(value)
+
+
 # ---------------------------------------------------------------------------
 # SSE message ID counter (local to this module — only _next_msg_id uses it)
 # ---------------------------------------------------------------------------

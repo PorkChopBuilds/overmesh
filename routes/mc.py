@@ -18,7 +18,7 @@ from flask import Blueprint, jsonify, request
 
 from config import CONFIG, CONFIG_LOCK, save_config
 from cross import maybe_forward_mc_message
-from helpers import push_to_sse
+from helpers import _as_bool, push_to_sse
 from mesh_mc import (MC_PAYLOAD_TYPE_NAMES, MC_ROUTE_TYPE_NAMES,
                      send_chan_msg, send_dm, send_advert, refresh_contacts,
                      get_device_info, set_radio_params, set_tx_power,
@@ -441,7 +441,7 @@ def api_mc_share_contact(radio_id, contact_id):
 def api_mc_set_contact_route(radio_id, contact_id):
     """Set or clear a stored routing path for one MC contact."""
     data = request.get_json(silent=True) or {}
-    clear = bool(data.get("clear"))
+    clear = _as_bool(data.get("clear"))
     hop_prefixes = data.get("hops") or []
     if not isinstance(hop_prefixes, list):
         return jsonify({"error": "hops must be a list"}), 400
@@ -508,7 +508,7 @@ def api_mc_get_ignored():
 @bp.route("/api/mc/contacts/<contact_id>/ignore", methods=["PATCH"])
 def api_mc_ignore_contact(contact_id):
     data = request.get_json(silent=True) or {}
-    ignored = bool(data.get("ignored", True))
+    ignored = _as_bool(data.get("ignored", True))
     set_mc_ignored(contact_id, ignored)
     return jsonify({"ok": True, "ignored": ignored})
 
@@ -874,7 +874,7 @@ def api_mc_statusreq(radio_id, node_id):
     if not node_id or len(node_id) < 6:
         return jsonify({"error": "node_id (pubkey prefix) required"}), 400
     data = request.get_json(silent=True) or {}
-    prime_trace = bool(data.get("trace_probe"))
+    prime_trace = _as_bool(data.get("trace_probe"))
     try:
         result = req_node_status(radio_id, node_id, prime_trace=prime_trace)
         if result:
@@ -931,8 +931,8 @@ def api_mc_remote_read(radio_id, node_id):
     """Login/read remote repeater or room-server data via the selected MC radio."""
     data = request.get_json(silent=True) or {}
     password = data.get("password")
-    login = bool(data.get("login"))
-    login_only = bool(data.get("login_only"))
+    login = _as_bool(data.get("login"))
+    login_only = _as_bool(data.get("login_only"))
     try:
         kwargs = {"password": password, "login": login}
         if login_only:
@@ -966,7 +966,7 @@ def api_mc_remote_command(radio_id, node_id):
 def api_mc_advert(radio_id):
     """Broadcast an advertisement (announce presence on mesh)."""
     data  = request.get_json(silent=True) or {}
-    flood = bool(data.get("flood", False))
+    flood = _as_bool(data.get("flood", False))
     if CONFIG.get("silent_mode"):
         return jsonify({"error": "Silent Running active: transmissions are blocked"}), 409
     try:
@@ -1394,7 +1394,7 @@ def api_mc_scan(radio_id):
     # Probe mode ({"advert": false}): DISCOVER_REQ only. Same repeater probe as
     # Mesh-Torry's scan — surfaces coverage without announcing our identity, so
     # other nodes do not add this radio to their contact tables.
-    advert = data.get("advert", True) is not False
+    advert = _as_bool(data.get("advert", True))
     with _scan_lock:
         existing = _scan_timers.get(radio_id)
         if existing and existing.is_alive():
