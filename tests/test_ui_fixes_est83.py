@@ -237,5 +237,40 @@ class TestUnreferencedLibsRemoved(unittest.TestCase):
         self.assertEqual(offenders, [], "H3: something still references a deleted asset")
 
 
+class TestWaypointDialog(unittest.TestCase):
+    """Q4: the Map marker dialog is network-aware and can also write a Log entry.
+
+    MeshCore has no waypoint packet type, so the Mark (MT waypoint) tab must not
+    be offered on an MC-only map; the Self Note tab then carries an optional
+    "Also add to Log" that POSTs the note name/description/coordinates to
+    /api/toc (the same fields tocSubmit uses).
+    """
+
+    def setUp(self):
+        self.src = _js()
+
+    def test_mark_tab_is_labelled_as_mt_waypoint(self):
+        self.assertTrue("📡 Mark (MT waypoint)" in self.src,
+                        "Q4: the Mark tab must be labelled as the MT waypoint tab")
+        self.assertTrue("Sent as a Meshtastic waypoint. MeshCore has no waypoint message." in self.src,
+                        "Q4: the Mark tab must explain why it is MT-only")
+
+    def test_dialog_detects_the_map_network(self):
+        body = _fn_body(self.src, "openWaypointModal")
+        self.assertIn("mapShowMt", body, "Q4: dialog must read the map MT/MC toggle")
+        self.assertIn("mapShowMc", body, "Q4: dialog must read the map MT/MC toggle")
+        self.assertRegex(body, r"showMarkTab", "Q4: the dialog must decide whether to show the Mark tab")
+        self.assertRegex(body, r"mcHide", "Q4: an MC map that is force-hidden must count as MT-visible")
+
+    def test_self_note_has_also_add_to_log(self):
+        self.assertTrue("Also add to Log" in self.src, "Q4: the Self Note tab needs the checkbox")
+        self.assertTrue("note-also-log" in self.src, "Q4: the checkbox must be readable from saveMapNote")
+        body = _fn_body(self.src, "saveMapNote")
+        self.assertIn("/api/toc", body, "Q4: checking the box must POST a Log (TOC) entry")
+        self.assertIn("category", body, "Q4: the TOC entry must set a category like tocSubmit")
+        self.assertRegex(body, r"Name:", "Q4: the Log entry must carry the note name")
+        self.assertRegex(body, r"Coordinates:", "Q4: the Log entry must carry the coordinates")
+
+
 if __name__ == "__main__":
     unittest.main()

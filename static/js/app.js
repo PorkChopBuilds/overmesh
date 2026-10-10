@@ -8314,6 +8314,16 @@ if (targetEl) {
     _editWpId = null;
     _wpDestNode = null;
     _wpMarkerEmoji = '📍';
+    // Which network(s) the Map is currently showing decides the dialog. The Map
+    // keeps this in mapShowMt / mapShowMc (the MT/MC pills, persisted in
+    // localStorage); MC markers additionally need the MC UI not force-hidden and
+    // at least one configured MC radio. MeshCore has NO waypoint packet type, so
+    // the Mark tab is only offered when MT is visible; an MC-only map gets the
+    // Self Note tab by itself.
+    const mtVisible = mapShowMt;
+    const mcVisible = mapShowMc && localStorage.getItem('mcHide') !== '1' && Object.keys(mcLastStatus).length > 0;
+    const showMarkTab = mtVisible || !mcVisible;
+    const noteActive = !showMarkTab;
     // Fetch channels for selector
     let channels = [{index:0, name:'Primary'}];
     try {
@@ -8350,14 +8360,14 @@ if (targetEl) {
 
         <!-- Tab bar -->
         <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:2px;margin-top:-4px">
-          <button id="wptab-mark" onclick="wpSwitchTab('mark')"
-            style="flex:1;padding:6px 4px;background:none;border:none;border-bottom:2px solid var(--accent);color:var(--accent);cursor:pointer;font-size:12px;font-weight:600">📡 Mark</button>
+          ${showMarkTab ? `<button id="wptab-mark" onclick="wpSwitchTab('mark')" title="Sent as a Meshtastic waypoint. MeshCore has no waypoint message."
+            style="flex:1;padding:6px 4px;background:none;border:none;border-bottom:2px solid var(--accent);color:var(--accent);cursor:pointer;font-size:12px;font-weight:600">📡 Mark (MT waypoint)</button>` : ''}
           <button id="wptab-note" onclick="wpSwitchTab('note')"
-            style="flex:1;padding:6px 4px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text);cursor:pointer;font-size:12px">📝 Self Note</button>
+            style="flex:1;padding:6px 4px;background:none;border:none;border-bottom:2px solid ${noteActive ? 'var(--accent)' : 'transparent'};color:${noteActive ? 'var(--accent)' : 'var(--text)'};cursor:pointer;font-size:12px${noteActive ? ';font-weight:600' : ''}">📝 Self Note</button>
         </div>
 
         <!-- ── Mark tab ── -->
-        <div id="wptab-mark-content">
+        <div id="wptab-mark-content"${showMarkTab ? '' : ' style="display:none"'}>
           <div style="display:flex;flex-direction:column;gap:10px">
             <div>
               <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">Map marker</label>
@@ -8420,7 +8430,7 @@ if (targetEl) {
         </div>
 
         <!-- ── Self Note tab ── -->
-        <div id="wptab-note-content" style="display:none">
+        <div id="wptab-note-content"${noteActive ? '' : ' style="display:none"'}>
           <div style="display:flex;flex-direction:column;gap:10px">
             <div>
               <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">Map marker</label>
@@ -8440,6 +8450,9 @@ if (targetEl) {
               <input id="note-desc-input" class="settings-input" placeholder="Optional details" maxlength="200"
                      style="width:100%;box-sizing:border-box">
             </div>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+              <input type="checkbox" id="note-also-log"> Also add to Log
+            </label>
             <div style="font-size:11px;color:var(--muted)">📍 ${lat.toFixed(5)}, ${lon.toFixed(5)}</div>
             <div style="font-size:11px;color:var(--muted);background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px 8px">
               Stored locally only. Not sent over the mesh.
@@ -8454,7 +8467,7 @@ if (targetEl) {
 
       </div>
     `);
-    setTimeout(() => document.getElementById('wp-name-input')?.focus(), 50);
+    setTimeout(() => document.getElementById(showMarkTab ? 'wp-name-input' : 'note-name-input')?.focus(), 50);
   }
 
   let _wpDestNode = null;  // {id, name} or null
@@ -8564,6 +8577,26 @@ if (targetEl) {
       });
       const data = await res.json().catch(() => ({}));
       if (data.ok) {
+        // EST-83 Q4: an optional Log (TOC) entry alongside the local note. Same
+        // POST fields as tocSubmit(), so it lands in the normal Log list.
+        if (document.getElementById('note-also-log')?.checked) {
+          const body = _tocStructuredMarkdown({
+            Name: name,
+            Description: desc,
+            Coordinates: `${_wpLat.toFixed(5)}, ${_wpLon.toFixed(5)}`,
+          });
+          try {
+            const tr = await fetch(BASE_PATH + '/api/toc', {
+              method: 'POST', headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({body, category: 'NOTE', ts: Math.floor(Date.now()/1000)})
+            });
+            const td = await tr.json().catch(() => ({}));
+            if (!tr.ok || td.error) throw new Error(td.error || `HTTP ${tr.status}`);
+          } catch(e) {
+            if (status) { status.style.color='var(--red)'; status.textContent='Note saved, but Log failed: ' + (e?.message || e); }
+            return;   // keep the dialog open so the failure is visible
+          }
+        }
         if (status) { status.style.color='var(--green)'; status.textContent='Saved!'; }
         setTimeout(closeModal, 800);
       } else {
