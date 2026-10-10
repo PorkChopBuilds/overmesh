@@ -2251,16 +2251,26 @@ def _copy_rssi_rank(copy):
         return -9999.0
 
 
+def _copy_first_seen_rank(copy):
+    """Earliest-seen rank. Missing/unparseable is treated as 0.0 (oldest), the
+    same as the old `or 0` — but it must never raise on a malformed timestamp
+    out of the live message path (EST-85 sweep)."""
+    try:
+        return float(copy.get("first_seen") or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def _best_rx_copy(copies):
     copies = list(copies or [])
     if not copies:
         return None
-    return sorted(copies, key=lambda c: (_copy_path_len_rank(c), -_copy_rssi_rank(c), float(c.get("first_seen") or 0)))[0]
+    return sorted(copies, key=lambda c: (_copy_path_len_rank(c), -_copy_rssi_rank(c), _copy_first_seen_rank(c)))[0]
 
 
 def _apply_rx_copies_to_message(msg, copies):
     copies = _dedup_rx_copies(copies)
-    msg["rx_copies"] = sorted(copies, key=lambda c: (float(c.get("first_seen") or 0), _copy_path_len_rank(c)))
+    msg["rx_copies"] = sorted(copies, key=lambda c: (_copy_first_seen_rank(c), _copy_path_len_rank(c)))
     primary = _best_rx_copy(copies)
     if not primary:
         return msg

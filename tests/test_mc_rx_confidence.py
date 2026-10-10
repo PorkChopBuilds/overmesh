@@ -151,6 +151,20 @@ class McMessageBadgeTests(unittest.TestCase):
         self.assertEqual(msg["path"], "aa")
         self.assertEqual(msg["rx_confidence"], "low")
 
+    def test_unparseable_first_seen_does_not_break_the_message(self):
+        # EST-85 sweep: the copy sort key cast first_seen with a bare float(),
+        # while the sibling path_len/rssi ranks guarded. One malformed timestamp
+        # raised ValueError out of the live message path. It must be treated like
+        # a missing one (0.0) and the copy ordering must still hold.
+        msg = {"subtype": "channel"}
+        copies = [
+            self._copy(2, "high", "aa"),
+            {**self._copy(1, "low", "bb"), "first_seen": "not-a-number"},
+        ]
+        mesh_mc._apply_rx_copies_to_message(msg, copies)
+        self.assertEqual(msg["path"], "bb")   # path_len still decides first
+        self.assertEqual(msg["rx_confidence"], "low")
+
 
 class McChannelHashCacheTests(unittest.TestCase):
     """The message side only carries channel_idx, so the expected hash is cached
