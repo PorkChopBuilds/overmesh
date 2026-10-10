@@ -2160,15 +2160,11 @@ def _rx_correlation_confidence(msg, rx, late=False, now_ts=None):
             return "medium"
         return "high"
     if subtype == "channel" and _payload_matches_subtype(rx.get("payload_typename"), "channel"):
-        try:
-            rx_path_len = int(rx.get("path_len"))
-        except (TypeError, ValueError):
-            rx_path_len = None
-        if rx_path_len == 0:
-            return "medium"
-        # Relayed channel packets arrive encrypted: the RX record carries none of
+        # Channel packets arrive encrypted: the RX record carries none of
         # sender/timestamp/text, so the only identity evidence available is the
         # channel hash (first byte of the GRP_TXT payload) plus the timing window.
+        # A direct (0-hop) reception is the MOST certain case, so it uses this
+        # same evidence instead of a blanket "medium" (EST-86).
         hash_match = _rx_channel_hash_matches(msg, rx)
         tight = _rx_in_tight_window(rx, now_ts)
         if hash_match and tight:

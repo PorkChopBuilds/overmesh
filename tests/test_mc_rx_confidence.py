@@ -85,12 +85,24 @@ class McRxConfidenceScoringTests(unittest.TestCase):
             mesh_mc._rx_correlation_confidence(msg, rx, now_ts=1001.0), "medium"
         )
 
-    def test_direct_packet_stays_medium(self):
-        # path_len 0 is a direct reception; behaviour is deliberately unchanged.
+    def test_direct_packet_with_hash_and_timing_is_high(self):
+        # EST-86: a 0-hop (direct) channel reception is the MOST certain case. A
+        # matching channel hash inside the tight window confirms it, so the same
+        # evidence that scores a relayed packet must score a direct one.
+        msg = _channel_msg(channel_hash="ab")
+        rx = _rx(chan_hash="ab", stored_at=1000.0, path_len=0)
+        self.assertEqual(
+            mesh_mc._rx_correlation_confidence(msg, rx, now_ts=1001.0), "high"
+        )
+
+    def test_direct_packet_without_evidence_is_low(self):
+        # EST-86 replaces the old "path_len 0 always returns medium" early exit.
+        # A direct packet with a mismatched hash and a stale timestamp has no
+        # confirmation, so it is now honestly low rather than always medium.
         msg = _channel_msg(channel_hash="ab")
         rx = _rx(chan_hash="cd", stored_at=900.0, path_len=0)
         self.assertEqual(
-            mesh_mc._rx_correlation_confidence(msg, rx, now_ts=1000.0), "medium"
+            mesh_mc._rx_correlation_confidence(msg, rx, now_ts=1000.0), "low"
         )
 
     def test_late_copy_is_never_high(self):
@@ -257,6 +269,84 @@ class McRelayedChannelFlowTests(unittest.TestCase):
         sse = self._flow(now_ts, chan_hash="cd", stored_at=now_ts - 30.0)
         self.assertEqual(sse["path"], "aabbcc")
         self.assertEqual(sse["rx_confidence"], "low")
+
+
+class McDirectLiveCaseTests(unittest.TestCase):
+    """LIVE CASE (Filip, 2026-10-11 00:42), channel "Don't Panic", CD's MC radio
+    to gandalf's ERA-3 ~1 m apart: the STORED message's shown copy is a 0-hop
+    (direct) reception, and a repeater copy arrives 1.7 s later. Direct copies
+    used to return "medium" before the hash/timing scoring, so the badge said
+    "path likely" on the most certain reception. EST-86 routes 0-hop copies
+    through the same scoring, and the badge follows the shown copy.
+    """
+
+    def setUp(self):
+        mesh_mc._mc_recent_rx_logs.clear()
+        mesh_mc._mc_channel_hashes.clear()
+
+    def tearDown(self):
+        mesh_mc._mc_recent_rx_logs.clear()
+        mesh_mc._mc_channel_hashes.clear()
+
+    def test_direct_copy_confirmed_and_badge_follows_it(self):
+        now_ts = time.time()
+        mesh_mc._remember_mc_channel_hashes("mc1", [
+            {"channel_idx": 1, "channel_name": "Don't Panic", "channel_hash": "ab"},
+        ])
+        msg = {"subtype": "channel", "channel_idx": 1, "text": "hello"}
+        expected_hash = mesh_mc._mc_channel_hash_for("mc1", 1)
+
+        # 1) The direct (0-hop) reception, ~1 m away, is logged first.
+        mesh_mc._remember_rx_log("mc1", {
+            "payload_typename": "GRP_TXT",
+            "path_len": 0,
+            "path": "",
+            "path_hash_size": 1,
+            "rssi": -50,
+            "snr": 9.0,
+            "chan_hash": "ab",
+            "stored_at": now_ts,
+        })
+        rx = mesh_mc._best_recent_rx_for_message("mc1", "channel", now_ts, msg=msg)
+        self.assertIsNotNone(rx)
+        direct_copy = mesh_mc._rx_copy_from_entry(msg, rx)
+        direct_copy["confidence"] = mesh_mc._rx_correlation_confidence(
+            {**msg, "channel_hash": expected_hash}, rx, now_ts=now_ts
+        )
+        # A direct reception is the most certain case: hash + tight -> high.
+        self.assertEqual(direct_copy["confidence"], "high")
+
+        sse = {"subtype": "channel", "channel": 1}
+        mesh_mc._apply_rx_copies_to_message(sse, [direct_copy])
+        self.assertEqual(sse["path_len"], 0)
+        self.assertEqual(sse["rx_confidence"], "high")  # no badge
+
+        # 2) The repeater copy arrives 1.7 s later and gets its own score.
+        later = now_ts + 1.7
+        mesh_mc._remember_rx_log("mc1", {
+            "payload_typename": "GRP_TXT",
+            "path_len": 1,
+            "path": "aa",
+            "path_hash_size": 1,
+            "rssi": -70,
+            "snr": 5.0,
+            "chan_hash": "ab",
+            "stored_at": later,
+        })
+        rx2 = mesh_mc._best_recent_rx_for_message("mc1", "channel", later, msg=msg)
+        self.assertIsNotNone(rx2)
+        self.assertEqual(rx2["path_len"], 1)
+        relay_copy = mesh_mc._rx_copy_from_entry(msg, rx2)
+        relay_copy["confidence"] = mesh_mc._rx_correlation_confidence(
+            {**msg, "channel_hash": expected_hash}, rx2, late=True, now_ts=later
+        )
+        # Confirmed hash and tight window, but attached after delivery: late cap.
+        self.assertEqual(relay_copy["confidence"], "medium")
+
+        # 3) The shown copy is still the 0-hop one, so the badge stays clear.
+        mesh_mc._apply_rx_copies_to_message(sse, list(sse["rx_copies"]) + [relay_copy])
+        self.assertEqual(sse["path_len"], 0)
+        self.assertEqual(sse["rx_confidence"], "high")
 
 
 if __name__ == "__main__":
