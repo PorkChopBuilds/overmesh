@@ -640,7 +640,6 @@
       alert_log_node_new:    document.getElementById('alert-log-node-new')?.checked   ?? true,
       alert_log_node_return: document.getElementById('alert-log-node-return')?.checked ?? true,
       alert_log_radio:       document.getElementById('alert-log-radio')?.checked      ?? true,
-      alert_log_rc_obs:      document.getElementById('alert-log-rc-obs')?.checked      ?? true,
       alert_log_rc_collect:  document.getElementById('alert-log-rc-collect')?.checked  ?? true,
       alert_log_rc_new_node: document.getElementById('alert-log-rc-new-node')?.checked ?? true,
     };
@@ -653,7 +652,7 @@
   }
   function loadAlertLogPrefs(cfg = null) {
     _appSettings = Object.assign({}, _appSettings || {}, cfg || _appSettings || {});
-    const defaults = { messages: true, geofence: true, 'node-new': true, 'node-return': false, radio: true, 'rc-obs': true, 'rc-collect': true, 'rc-new-node': true };
+    const defaults = { messages: true, geofence: true, 'node-new': true, 'node-return': false, radio: true, 'rc-collect': true, 'rc-new-node': true };
     Object.entries(defaults).forEach(([k, def]) => {
       const el = document.getElementById(`alert-log-${k}`);
       if (el) el.checked = _appPrefBool(`alert_log_${k.replace(/-/g, '_')}`, def);

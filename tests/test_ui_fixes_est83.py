@@ -130,5 +130,17 @@ class TestLabelFixes(unittest.TestCase):
                       "H4: the MC actions status must explain what is happening")
 
 
+class TestDeadControlRemoved(unittest.TestCase):
+    """C3: the 'RC collector obs count' alert toggle had no producer, so it could
+    never light the Alert Panel. Removed from the UI + prefs wiring; a stored
+    `alert_log_rc_obs` key in config stays harmless (the loader no longer reads it)."""
+
+    def test_rc_obs_toggle_is_gone_from_ui_and_prefs(self):
+        self.assertEqual(_html().count("alert-log-rc-obs"), 0,
+                         "C3: the dead RC-obs toggle must be removed from Settings")
+        self.assertEqual(_js().count("alert_log_rc_obs"), 0,
+                         "C3: saveAlertLogPrefs/loadAlertLogPrefs must not carry the dead key")
+
+
 if __name__ == "__main__":
     unittest.main()
