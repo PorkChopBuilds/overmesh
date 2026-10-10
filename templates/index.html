@@ -12,7 +12,7 @@
 </head>
 <body{% if exposed_no_auth %} class="exposed-active"{% endif %}>
 
-<div id="exposed-banner" title="This instance is bound to {{ bind_host }} with no login enabled. Anyone who can reach it can send RF and control it. Enable a password in Settings → Authentication, or bind to 127.0.0.1 (see README → Security).">⚠ No login enabled — reachable on your network ({{ bind_host }})
+<div id="exposed-banner" title="This instance is bound to {{ bind_host }} with no login enabled. Anyone who can reach it can send RF and control it. Enable a password in Settings → Authentication, or bind to 127.0.0.1 (see README → Security).">⚠ No login enabled. Reachable on your network ({{ bind_host }})
   <button onclick="dismissExposedBanner(this)" style="margin-left:12px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.35);color:#fecaca;padding:1px 10px;border-radius:4px;cursor:pointer;font-size:11px" title="Hide this warning until the instance is no longer exposed (stays hidden across restarts)">✕ Don't show again</button>
 </div>
 
@@ -232,7 +232,7 @@
 
 
 <div id="app-topo-bg" aria-hidden="true"></div>
-<div id="silent-banner">Silent Running active — all radio transmissions blocked<button onclick="toggleSilentMode()">Disable</button></div>
+<div id="silent-banner">Silent Running active. All radio transmissions blocked<button onclick="toggleSilentMode()">Disable</button></div>
 <div id="header">
   <div style="height:28px;aspect-ratio:848/202;flex-shrink:0;background:var(--accent);
     -webkit-mask-image:url('/static/Overmesh_logo.png');mask-image:url('/static/Overmesh_logo.png');
@@ -255,7 +255,7 @@
   <div class="header-spacer"></div>
   <span id="last-updated" style="font-size:12px;color:var(--muted);white-space:nowrap"></span>
   <button class="btn" id="header-refresh-btn" onclick="loadCurrent(this)" title="Refresh MT and MC state from connected radios"><span class="btn-icon">↻</span><span class="btn-label">Refresh</span></button>
-  <button class="btn" id="silent-btn" onclick="toggleSilentMode()" title="Enable Silent Running — suppresses all radio transmissions">Silent</button>
+  <button class="btn" id="silent-btn" onclick="toggleSilentMode()" title="Enable Silent Running: suppresses all radio transmissions">Silent</button>
   <div id="alerts-btn-wrap">
     <button class="btn" id="alerts-btn" onclick="toggleAlertsPanel(event)" title="Alert history">&#128276;<span id="alerts-badge">0</span></button>
     <div id="alerts-panel" onclick="event.stopPropagation()"></div>
@@ -308,7 +308,7 @@
             <label class="cols-menu-row" title="Short name or abbreviation (e.g. 4-letter code)"><input type="checkbox" data-live-col="short" onchange="setLiveColVisible('short', this.checked)"> Short</label>
             <label class="cols-menu-row" title="Signal-to-noise ratio of the last heard packet"><input type="checkbox" data-live-col="snr" onchange="setLiveColVisible('snr', this.checked)"> SNR</label>
             <label class="cols-menu-row" title="Reported battery level (Meshtastic nodes)"><input type="checkbox" data-live-col="battery" onchange="setLiveColVisible('battery', this.checked)"> Battery</label>
-            <label class="cols-menu-row" title="Hops away (MT). For MC contacts: route hops when a route is stored — 'flood' means no route is stored, so packets go to the whole mesh and no hop count exists yet."><input type="checkbox" data-live-col="hops" onchange="setLiveColVisible('hops', this.checked)"> Hops</label>
+            <label class="cols-menu-row" title="Hops away (MT). For MC contacts: route hops when a route is stored, 'flood' means no route is stored, so packets go to the whole mesh and no hop count exists yet."><input type="checkbox" data-live-col="hops" onchange="setLiveColVisible('hops', this.checked)"> Hops</label>
             <label class="cols-menu-row" title="Estimated distance to your location"><input type="checkbox" data-live-col="distance" onchange="setLiveColVisible('distance', this.checked)"> Distance</label>
             <label class="cols-menu-row" title="When this node/contact was last heard"><input type="checkbox" data-live-col="lastseen" onchange="setLiveColVisible('lastseen', this.checked)"> Last seen</label>
             <label class="cols-menu-row" title="Where it is saved: on the radio, in OverMesh, or both"><input type="checkbox" data-live-col="stored" onchange="setLiveColVisible('stored', this.checked)"> Stored</label>
@@ -344,11 +344,11 @@
         <thead>
           <tr>
             <th style="width:32px"></th>
-            <th class="sortable" data-col="long_name" data-live-col="name" onclick="setLiveSort('long_name')" title="Node or contact name — always visible"><span>Name</span> <span class="sort-arrow"></span></th>
+            <th class="sortable" data-col="long_name" data-live-col="name" onclick="setLiveSort('long_name')" title="Node or contact name. Always visible"><span>Name</span> <span class="sort-arrow"></span></th>
             <th data-live-col="short" title="Short name or abbreviation (e.g. 4-letter code)">Short</th>
             <th class="sortable" data-col="snr" data-live-col="snr" onclick="setLiveSort('snr')" title="Signal-to-noise ratio of the last heard packet">SNR <span class="sort-arrow"></span></th>
             <th class="sortable" data-col="battery" data-live-col="battery" onclick="setLiveSort('battery')" title="Reported battery level (Meshtastic nodes)">Battery <span class="sort-arrow"></span></th>
-            <th class="sortable" data-col="hops_away" data-live-col="hops" onclick="setLiveSort('hops_away')" title="Hops away (MT). For MC contacts: route hops when a route is stored — 'flood' means no route is stored, so packets go to the whole mesh and no hop count exists yet.">Hops <span class="sort-arrow"></span></th>
+            <th class="sortable" data-col="hops_away" data-live-col="hops" onclick="setLiveSort('hops_away')" title="Hops away (MT). For MC contacts: route hops when a route is stored, 'flood' means no route is stored, so packets go to the whole mesh and no hop count exists yet.">Hops <span class="sort-arrow"></span></th>
             <th class="sortable" data-col="_dist" data-live-col="distance" onclick="setLiveSort('_dist')" title="Estimated distance to your location">Distance <span class="sort-arrow"></span></th>
             <th class="sortable" data-col="last_heard_ts" data-live-col="lastseen" onclick="setLiveSort('last_heard_ts')" title="When this node/contact was last heard">Last Seen <span class="sort-arrow"></span></th>
             <th data-live-col="stored" title="Where it is saved: on the radio, in OverMesh, or both">Stored</th>
@@ -425,7 +425,7 @@
         <button class="emoji-btn" onclick="toggleEmojiPicker('mc-chat-input',this)" title="Emoji">😊</button>
         <button class="dm-send" id="mc-send-btn" onclick="sendMcChan()" title="Send message to active MC channel">Send</button>
         <div id="mc-advert-wrap" style="position:relative;flex-shrink:0">
-          <button class="btn btn-net-mc network-accent-mc" id="mc-advert-btn" style="font-size:12px;padding:0 10px;height:36px;display:inline-flex;align-items:center" onclick="toggleMcAdvertMenu(event)" title="Advertise — announces this node to the MeshCore network">Advert &#9650;</button>
+          <button class="btn btn-net-mc network-accent-mc" id="mc-advert-btn" style="font-size:12px;padding:0 10px;height:36px;display:inline-flex;align-items:center" onclick="toggleMcAdvertMenu(event)" title="Advertise: announces this node to the MeshCore network">Advert &#9650;</button>
           <div id="mc-advert-menu" style="display:none;position:absolute;bottom:calc(100% + 4px);right:0;background:var(--bg2);border:1px solid var(--border);border-radius:6px;min-width:140px;z-index:999;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.4)">
             <button class="mc-advert-item" style="border-bottom:1px solid var(--border)" onclick="mcSendAdvert(false)">Local <span style="color:var(--muted);font-size:11px">(no hops)</span></button>
             <button class="mc-advert-item" onclick="mcSendAdvert(true)">Flood</button>
@@ -440,7 +440,7 @@
     <div class="toolbar" id="map-toolbar" style="padding:4px 8px;flex-shrink:0;margin-bottom:0">
       <div class="view-toggle">
         <div class="btn active" id="map-btn-map"   onclick="toggleSensePanel(false)" title="Show map view">Map</div>
-        <div class="btn"        id="map-btn-sense" onclick="toggleSensePanel(true)"  title="Open Sense panel — scan and detect nearby nodes">Sense</div>
+        <div class="btn"        id="map-btn-sense" onclick="toggleSensePanel(true)"  title="Open Sense panel. Scan and detect nearby nodes">Sense</div>
       </div>
       <!-- Map mode: MT/MC map filter pill -->
       <div class="view-toggle" id="map-net-filter" style="margin-left:8px">
@@ -467,20 +467,20 @@
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
               <button id="sense-btn" onclick="triggerSense()" title="One-shot: broadcast position request to entire mesh and collect responses for 60s" style="background:var(--accent);color:#0a0f1e;border:none;border-radius:6px;padding:8px 18px;font-weight:700;font-size:13px;cursor:pointer">Sense Mesh</button>
               <div id="sense-mt-toggle" class="view-toggle">
-                <div class="btn active" id="sense-passive-btn" onclick="toggleSensePassive()" title="Continuously capture any heard packets — no broadcast. Each radio tracks its own nodes independently. Nodes are kept for 2h after last heard, then expire. Clear only happens on a manual Sense Mesh run.">Passive</div>
+                <div class="btn active" id="sense-passive-btn" onclick="toggleSensePassive()" title="Continuously capture any heard packets. No broadcast. Each radio tracks its own nodes independently. Nodes are kept for 2h after last heard, then expire. Clear only happens on a manual Sense Mesh run.">Passive</div>
                 <div class="btn" id="sense-active-btn"  onclick="toggleSenseActive()"  title="Periodically broadcast position requests at cooldown interval">Active</div>
               </div>
             </div>
             <div id="sense-mt-info" style="display:flex;flex-direction:column;gap:4px">
               <div style="font-size:11px;color:var(--muted)">⚠️ Active broadcasts to the <strong>entire mesh</strong>. Use sparingly.</div>
-              <div id="sense-cooldown-bar" style="display:none;font-size:12px;color:var(--muted)">Cooldown: <span id="sense-cooldown-val">—</span></div>
+              <div id="sense-cooldown-bar" style="display:none;font-size:12px;color:var(--muted)">Cooldown: <span id="sense-cooldown-val">-</span></div>
             </div>
             <div id="sense-status" style="font-size:12px;color:var(--accent);min-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
           </div>
           <div id="sense-summary" style="display:none;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;flex-shrink:0">
             <div class="sense-card-stat"><div id="sense-stat-responses">0</div><div>Responded</div></div>
             <div class="sense-card-stat"><div id="sense-stat-gps">0</div><div>With GPS</div></div>
-            <div class="sense-card-stat"><div id="sense-stat-snr">—</div><div>Avg SNR</div></div>
+            <div class="sense-card-stat"><div id="sense-stat-snr">-</div><div>Avg SNR</div></div>
           </div>
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-shrink:0">
             <span style="font-size:11px;color:var(--muted)">Nodes detected</span>
@@ -497,9 +497,9 @@
         <div id="sense-mc-wrap" style="display:none;flex-direction:column;flex:1;min-height:0">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-shrink:0;flex-wrap:wrap">
             <button id="mc-scan-btn" class="btn" onclick="startMcScan()" title="Send one MC advert, then probe repeaters (DISCOVER_REQ) and listen for responses during the scan window" style="display:none">Scan</button>
-            <button id="mc-probe-btn" class="btn" onclick="startMcScan(false)" title="Probe repeaters only (DISCOVER_REQ), no advert — surfaces coverage without announcing your identity or being added to other nodes' contacts" style="display:none">Probe</button>
+            <button id="mc-probe-btn" class="btn" onclick="startMcScan(false)" title="Probe repeaters only (DISCOVER_REQ), no advert. Surfaces coverage without announcing your identity or being added to other nodes' contacts" style="display:none">Probe</button>
             <span id="mc-scan-status" style="display:none;font-size:11px;color:var(--muted);white-space:nowrap"></span>
-            <button id="mc-trace-btn" class="btn" onclick="toggleMcTraces()" title="Show the paths of MeshCore packets this radio overheard — passive, transmits nothing" style="display:none">Traces</button>
+            <button id="mc-trace-btn" class="btn" onclick="toggleMcTraces()" title="Show the paths of MeshCore packets this radio overheard. Passive, transmits nothing" style="display:none">Traces</button>
             <button id="mc-neighbors-btn" class="btn" onclick="doMcNeighbors()" title="Show contacts by last known MC path: direct, nearby, recent, or all" style="display:none">Last Heard</button>
             <span style="flex:1"></span>
             <span id="sense-mc-status" style="font-size:11px;color:var(--muted);white-space:nowrap"></span>
@@ -682,7 +682,7 @@
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
           <div class="view-toggle">
             <div class="btn active" id="relay-mode-dm"        onclick="setRelayMode('dm')"        title="Relay incoming messages as direct messages to the target node">DM to node</div>
-            <div class="btn"        id="relay-mode-broadcast" onclick="setRelayMode('broadcast')" title="Relay incoming messages as channel broadcasts — more reliable in sparse meshes">Broadcast</div>
+            <div class="btn"        id="relay-mode-broadcast" onclick="setRelayMode('broadcast')" title="Relay incoming messages as channel broadcasts. More reliable in sparse meshes">Broadcast</div>
           </div>
           <div id="relay-channel-row" style="display:none;align-items:center;gap:6px;font-size:13px">
             <span style="color:var(--muted)">Channel:</span>
@@ -777,7 +777,7 @@
           <button class="btn" onclick="tocSetNow()" title="Use current date and time" style="padding:4px 8px;font-size:12px">Now</button>
         </div>
         <select id="toc-template" onchange="tocApplyTemplate(this.value)" style="background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;flex:1;min-width:140px">
-          <option value="">— template —</option>
+          <option value="">template</option>
           <option value="plan">PLAN</option>
           <option value="sitrep">SITREP</option>
           <option value="contact">First Contact</option>
@@ -921,8 +921,8 @@
       <section class="log-sop-section">
         <h3>Quick Launch</h3>
         <div class="log-sop-actionbar">
-          <button class="log-sop-action" onclick="logSopUse('plan')" title="Prefill a PLAN entry — define objective, route, and comms before any activation">Plan</button>
-          <button class="log-sop-action" onclick="logSopUse('mobile-start')" title="Prefill a mobile movement plan — use when departing with the Cyberdeck">Depart</button>
+          <button class="log-sop-action" onclick="logSopUse('plan')" title="Prefill a PLAN entry. Define objective, route, and comms before any activation">Plan</button>
+          <button class="log-sop-action" onclick="logSopUse('mobile-start')" title="Prefill a mobile movement plan. Use when departing with the Cyberdeck">Depart</button>
           <button class="log-sop-action" onclick="logSopUse('basecamp-open')" title="Prefill a static station opening report">Station open</button>
           <button class="log-sop-action" onclick="logSopUse('quick-sitrep')" title="Prefill a current status SITREP">SITREP</button>
           <button class="log-sop-action" onclick="logSopUse('rc-collect')" title="Prefill a Remote Collector sweep note">Collector sweep</button>
@@ -1138,7 +1138,7 @@
             <input type="checkbox" id="node-cfg-ok-to-mqtt"> OK to MQTT <span style="color:var(--muted)">(others may uplink my packets)</span>
           </label>
           <label style="display:flex;align-items:center;gap:5px;font-size:12px"
-                 title="Refuse any packet that travelled via MQTT (keeps internet traffic out of your local mesh). Independent of uplinking — your own packets still go up if a channel has Uplink enabled.">
+                 title="Refuse any packet that travelled via MQTT (keeps internet traffic out of your local mesh). Independent of uplinking. Your own packets still go up if a channel has Uplink enabled.">
             <input type="checkbox" id="node-cfg-ignore-mqtt"> Ignore MQTT-relayed packets
           </label>
         </div>
@@ -1187,7 +1187,7 @@
                 <option value="custom">Custom (hex)</option>
               </select>
             </div>
-            <input id="node-cfg-ch-psk-hex" class="settings-input" placeholder="hex or base64 — e.g. d4f1bb3a… or OG8mgh5H…"
+            <input id="node-cfg-ch-psk-hex" class="settings-input" placeholder="hex or base64: e.g. d4f1bb3a… or OG8mgh5H…"
                    style="width:100%;margin-top:6px;display:none;font-family:monospace;font-size:11px">
             <div id="node-cfg-ch-key-row" style="display:none;margin-top:8px">
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
@@ -1198,7 +1198,7 @@
                         style="background:none;border:1px solid var(--border);border-radius:4px;padding:1px 6px;cursor:pointer;color:var(--muted);font-size:11px">Copy</button>
               </div>
               <input id="node-cfg-ch-key-display" type="password" readonly class="settings-input"
-                     style="width:100%;font-family:monospace;font-size:11px" placeholder="—">
+                     style="width:100%;font-family:monospace;font-size:11px" placeholder="-">
             </div>
           </div>
           <div style="display:flex;gap:8px;margin-top:12px">
@@ -1256,7 +1256,7 @@
         </div>
         <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
           <button class="btn" onclick="saveNodePosition(this)" title="Save position settings to the node">Save</button>
-          <button class="btn" onclick="removeNodePosition(this)" style="background:var(--bg3);border:1px solid var(--border);color:var(--muted)" title="Clear fixed position — onboard GPS resumes">Clear fixed position</button>
+          <button class="btn" onclick="removeNodePosition(this)" style="background:var(--bg3);border:1px solid var(--border);color:var(--muted)" title="Clear fixed position. Onboard GPS resumes">Clear fixed position</button>
         </div>
         <div id="node-cfg-position-status" style="font-size:12px;min-height:16px;margin-top:4px"></div>
 
@@ -1282,8 +1282,8 @@
             <label class="settings-label">Screen timeout (s) <span style="font-weight:400">(0 = always on)</span></label>
             <input id="node-cfg-screen-secs" type="number" class="settings-input" min="0" style="width:80px">
           </div>
-          <button class="btn" onclick="quickScreenOff(this)" title="Set to 10s — effectively always off">Turn off</button>
-          <button class="btn" onclick="quickScreenOn(this)" title="Set to 0 — never sleep">Always on</button>
+          <button class="btn" onclick="quickScreenOff(this)" title="Set to 10s. Effectively always off">Turn off</button>
+          <button class="btn" onclick="quickScreenOn(this)" title="Set to 0. Never sleep">Always on</button>
           <div>
             <label class="settings-label">Units</label>
             <select id="node-cfg-display-units" class="settings-select">
@@ -1346,11 +1346,11 @@
         </div>
         <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">
           <label style="display:flex;align-items:center;gap:5px;font-size:12px"
-                 title="Map REPORTING: publishes this node's name/position/model to the <root>/2/map/ topic. Used by maps that consume MAP_REPORT (e.g. meshmap.net). NOTE: map.meshnet.si does NOT use map reports — it builds its map from uplinked NODEINFO + POSITION packets, so for that map enable 'MQTT uplink' on the primary channel instead.">
+                 title="Map REPORTING: publishes this node's name/position/model to the <root>/2/map/ topic. Used by maps that consume MAP_REPORT (e.g. meshmap.net). NOTE: map.meshnet.si does NOT use map reports. It builds its map from uplinked NODEINFO + POSITION packets, so for that map enable 'MQTT uplink' on the primary channel instead.">
             <input type="checkbox" id="node-cfg-mqtt-map-location"> Report my location to the map
           </label>
           <div>
-            <label class="settings-label">Map report interval (s) <span style="font-weight:400">— blank = firmware default; firmware minimum 3600</span></label>
+            <label class="settings-label">Map report interval (s)<span style="font-weight:400">: blank = firmware default; firmware minimum 3600</span></label>
             <input id="node-cfg-mqtt-map-interval" type="number" min="3600" max="86400" class="settings-input" style="width:120px" placeholder="e.g. 3600">
           </div>
           <div>
@@ -1390,7 +1390,7 @@
             <input type="checkbox" id="node-cfg-wifi-enabled"> WiFi enabled
           </label>
           <label style="display:flex;align-items:center;gap:5px;font-size:12px">
-            <input type="checkbox" id="node-cfg-wifi-ap-mode" disabled> AP mode <span style="color:var(--muted);font-size:11px">(not supported by this radio firmware — not sent)</span>
+            <input type="checkbox" id="node-cfg-wifi-ap-mode" disabled> AP mode <span style="color:var(--muted);font-size:11px">(not supported by this radio firmware, not sent)</span>
           </label>
           <div>
             <label class="settings-label">SSID</label>
@@ -1405,14 +1405,14 @@
           </div>
         </div>
         <p style="font-size:11px;color:var(--muted);margin:6px 0 0">Note: enabling WiFi disables Bluetooth on ESP32 nodes. Reboot required after saving.</p>
-        <button class="btn" onclick="saveNodeNetwork(this)" style="margin-top:8px" title="Save WiFi/network settings to the node — reboot required">Save</button>
+        <button class="btn" onclick="saveNodeNetwork(this)" style="margin-top:8px" title="Save WiFi/network settings to the node. Reboot required">Save</button>
         <div id="node-cfg-network-status" style="font-size:12px;min-height:16px;margin-top:4px"></div>
 
         <!-- Node actions -->
         <h3 class="settings-subtitle">Node Actions</h3>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <button class="btn" onclick="rebootNode(this)" style="background:var(--bg3);border:1px solid var(--border)" title="Remotely reboot this Meshtastic node">↺ Reboot node</button>
-          <button class="btn" onclick="shutdownNode(this)" style="background:var(--bg3);border:1px solid #f87171;color:#f87171" title="Remotely shut down this node — requires physical power cycle to restart">⏻ Shutdown node</button>
+          <button class="btn" onclick="shutdownNode(this)" style="background:var(--bg3);border:1px solid #f87171;color:#f87171" title="Remotely shut down this node. Requires physical power cycle to restart">⏻ Shutdown node</button>
           <button class="btn" onclick="resetKnownNodesDb(this)" style="background:var(--bg3);border:1px solid #f59e0b;color:#f59e0b" title="Clear all remembered remote nodes for this selected radio from OverMesh history and live cache">⌫ Clear known nodes</button>
         </div>
         <div id="node-cfg-actions-status" style="font-size:12px;min-height:16px;margin-top:6px"></div>
@@ -1597,7 +1597,7 @@
       <div id="mc-auto-add-status" style="font-size:12px;min-height:16px;color:var(--muted);margin-bottom:14px"></div>
 
       <h2 class="settings-title">Device Info <button class="btn" onclick="loadMcDeviceInfo()" style="font-size:11px;padding:2px 8px;margin-left:6px" title="Query device for fresh info">↻ Refresh</button></h2>
-      <div id="mc-device-info-content" style="color:var(--muted);font-size:12px;margin-bottom:14px">—</div>
+      <div id="mc-device-info-content" style="color:var(--muted);font-size:12px;margin-bottom:14px">-</div>
 
       <h2 class="settings-title">Device Actions</h2>
       <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px">
@@ -1626,22 +1626,22 @@
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
         <label class="settings-label" style="margin-bottom:0">Share position in adverts:</label>
-        <button id="mc-loc-policy-btn" class="btn" onclick="toggleMcAdvertLoc(this)" title="Enable or disable broadcasting your position in mesh advertisements">—</button>
+        <button id="mc-loc-policy-btn" class="btn" onclick="toggleMcAdvertLoc(this)" title="Enable or disable broadcasting your position in mesh advertisements">-</button>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn" style="color:var(--red);border-color:var(--red)" onclick="rebootMcNode(this)" title="Send reboot command — may not be supported by all firmware versions">Reboot Device</button>
-        <button class="btn" id="mc-debug-btn" onclick="startMcDebugEvents()" title="Log all serial events for 60s — check the server log to diagnose ping/status issues">Debug Events</button>
+        <button class="btn" style="color:var(--red);border-color:var(--red)" onclick="rebootMcNode(this)" title="Send reboot command. May not be supported by all firmware versions">Reboot Device</button>
+        <button class="btn" id="mc-debug-btn" onclick="startMcDebugEvents()" title="Log all serial events for 60s. Check the server log to diagnose ping/status issues">Debug Events</button>
       </div>
       <div id="mc-actions-status" style="font-size:12px;min-height:16px;color:var(--muted);margin-top:6px"></div>
 
       <h2 class="settings-title">Node Stats <button class="btn" onclick="loadMcStats()" style="font-size:11px;padding:2px 8px;margin-left:6px" title="Fetch live stats from this MC radio">↻ Fetch</button></h2>
-      <div id="mc-stats-content" style="color:var(--muted);font-size:12px;margin-bottom:14px">—</div>
+      <div id="mc-stats-content" style="color:var(--muted);font-size:12px;margin-bottom:14px">-</div>
 
       <h2 class="settings-title">Flood Scope (Regions) <span id="mc-scope-fw-note" style="font-weight:400;font-size:11px;color:var(--muted)"></span></h2>
       <div style="font-size:12px;color:var(--muted);margin-bottom:8px;max-width:640px;line-height:1.5">
         Scopes tag this radio's outgoing flood traffic so repeaters only relay it where the region is allowed
         (e.g. <code class="net-mc">si</code> keeps adverts and channel messages inside Slovenian repeaters). This companion
-        has a single scope slot — OM switches it per channel before each send. Empty = unscoped (floods everywhere).
+        has a single scope slot. OM switches it per channel before each send. Empty = unscoped (floods everywhere).
         Repeaters must carry the same region for traffic to pass.
       </div>
 
@@ -1657,7 +1657,7 @@
           <span style="font-size:11px;color:var(--muted)">Presets:</span>
           <button class="btn" style="font-size:11px;padding:2px 8px" onclick="mcScopeAddRegion('si')">si</button>
           <button class="btn" style="font-size:11px;padding:2px 8px" onclick="mcScopeAddRegion('europe')">europe</button>
-          <button class="btn" style="font-size:11px;padding:2px 8px;color:var(--yellow);border-color:var(--yellow)" onclick="mcScopeSetDefault('')" title="Clear the default scope — floods go out unscoped">Clear default</button>
+          <button class="btn" style="font-size:11px;padding:2px 8px;color:var(--yellow);border-color:var(--yellow)" onclick="mcScopeSetDefault('')" title="Clear the default scope. Floods go out unscoped">Clear default</button>
         </div>
         <datalist id="mc-scope-region-presets">
           <option value="si"></option><option value="si-gor"></option><option value="si-kor"></option>
@@ -1668,7 +1668,7 @@
 
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
         <span class="settings-label" style="margin-bottom:0">Default scope:</span>
-        <span id="mc-scope-default-label" style="font-family:monospace;font-size:12px;color:var(--accent);background:var(--bg3);padding:2px 10px;border-radius:10px;border:1px solid var(--border)">—</span>
+        <span id="mc-scope-default-label" style="font-family:monospace;font-size:12px;color:var(--accent);background:var(--bg3);padding:2px 10px;border-radius:10px;border:1px solid var(--border)">-</span>
         <input id="mc-scope-default-input" class="settings-input" list="mc-scope-region-presets" placeholder="region name or empty"
                style="width:150px;font-family:monospace;font-size:11px" maxlength="32"
                onkeydown="if(event.key==='Enter'){event.preventDefault();mcScopeSetDefaultFromInput()}">
@@ -1681,11 +1681,11 @@
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px">
           <span class="settings-label" style="margin-bottom:0">Discover regions</span>
           <button class="btn" onclick="mcScopeDiscover()" id="mc-scope-discover-btn"
-                  title="Ask nearby repeaters (0-hop) which regions they serve — transmits a sweep like Scan">Discover</button>
+                  title="Ask nearby repeaters (0-hop) which regions they serve. Transmits a sweep like Scan">Discover</button>
           <span id="mc-scope-discover-status" style="font-size:11px;color:var(--muted)"></span>
         </div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:6px;line-height:1.4">
-          Queries repeaters in direct range for the regions they carry. Results are suggestions — click a chip to add it
+          Queries repeaters in direct range for the regions they carry. Results are suggestions. Click a chip to add it
           to the known-regions catalog or set it as the default.
         </div>
         <div id="mc-scope-discover-results" style="display:none">
@@ -1700,7 +1700,7 @@
     <!-- MC Channel Management -->
     <div class="settings-section" id="mc-channels-section" style="display:none">
       <h2 class="settings-title">Channels</h2>
-      <div id="mc-channels-list" style="color:var(--muted);font-size:12px;margin-bottom:4px">—</div>
+      <div id="mc-channels-list" style="color:var(--muted);font-size:12px;margin-bottom:4px">-</div>
       <div id="mc-channels-remove-status" style="font-size:12px;min-height:16px;margin-bottom:4px"></div>
 
       <!-- Inline edit panel -->
@@ -1779,7 +1779,7 @@
         <button class="btn" onclick="loadPassiveIntelManager()" style="font-size:11px;padding:2px 8px;margin-left:6px" title="Refresh passive observations list">↻ Refresh</button>
       </h2>
       <p class="network-section-note mc" style="margin:0 0 10px">
-        OM passively records RF observations from overheard mesh traffic — adverts, messages, and trace hops — without transmitting. Data is stored per MC radio and keyed by node pubkey prefix.
+        OM passively records RF observations from overheard mesh traffic (adverts, messages, and trace hops) without transmitting. Data is stored per MC radio and keyed by node pubkey prefix.
       </p>
 
       <!-- Controls row -->
@@ -1804,7 +1804,7 @@
       </div>
 
       <!-- Stats summary -->
-      <div id="passive-intel-stats" style="font-size:12px;color:var(--muted);margin-bottom:10px">—</div>
+      <div id="passive-intel-stats" style="font-size:12px;color:var(--muted);margin-bottom:10px">-</div>
 
       <!-- Contact list -->
       <div id="passive-intel-list" style="font-size:12px">
@@ -1813,10 +1813,10 @@
 
       <!-- Collectors subsection -->
       <h2 class="settings-title" style="margin-top:20px">Remote Collectors
-        <span style="font-size:11px;font-weight:normal;color:var(--muted);margin-left:6px">— your remote RPTRs collecting passive RF intel over the mesh</span>
+        <span style="font-size:11px;font-weight:normal;color:var(--muted);margin-left:6px">your remote RPTRs collecting passive RF intel over the mesh</span>
       </h2>
       <p style="font-size:12px;color:var(--muted);margin:0 0 10px">
-        A Remote Collector is your own MeshCore RPTR running custom firmware, deployed at a remote vantage point (hilltop, solar-powered). It passively logs every node it hears — adverts with full identity and RSSI/SNR, plus anonymous packet activity for coverage mapping — into a local buffer. Press <b>Collect</b> to trigger a delivery: the collector sends its buffer back to your OM instance as encrypted mesh DMs, which OM stores automatically as passive observations.
+        A Remote Collector is your own MeshCore RPTR running custom firmware, deployed at a remote vantage point (hilltop, solar-powered). It passively logs every node it hears (adverts with full identity and RSSI/SNR, plus anonymous packet activity for coverage mapping) into a local buffer. Press <b>Collect</b> to trigger a delivery: the collector sends its buffer back to your OM instance as encrypted mesh DMs, which OM stores automatically as passive observations.
       </p>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
         <label style="font-size:12px;color:var(--muted)">Auto-collect every</label>
@@ -1876,7 +1876,7 @@
              style="width:32px;height:24px;border-radius:6px;background:var(--accent);cursor:pointer;border:1px solid var(--border);flex-shrink:0;transition:border-color 0.15s"
              onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'"></div>
         <button class="btn" onclick="settingsResetAccentColor(this)" style="font-size:12px;padding:3px 10px" title="Reset to default accent colour">Reset</button>
-        <span style="font-size:11px;color:var(--muted)">Pick any hue — shades auto-derive</span>
+        <span style="font-size:11px;color:var(--muted)">Pick any hue. Shades auto-derive</span>
       </div>
     </div>
 
@@ -2134,7 +2134,7 @@
     <!-- GPS Receiver -->
     <div class="settings-section">
       <h2 class="settings-title">GPS Receiver</h2>
-      <p style="color:var(--muted);font-size:12px;margin:0 0 12px 0">USB GPS receiver for location data. Two modes: <b>Direct serial</b> (OM owns the port) or <b>OPS-TOC proxy</b> (polls OPS-TOC when both apps run together — avoids serial conflicts). Can auto-push coordinates to connected nodes.</p>
+      <p style="color:var(--muted);font-size:12px;margin:0 0 12px 0">USB GPS receiver for location data. Two modes: <b>Direct serial</b> (OM owns the port) or <b>OPS-TOC proxy</b> (polls OPS-TOC when both apps run together, avoids serial conflicts). Can auto-push coordinates to connected nodes.</p>
       <div style="display:flex;gap:16px;align-items:flex-start">
         <!-- Controls (left) -->
         <div style="flex:1;min-width:0">
@@ -2200,11 +2200,11 @@
           <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">GPS Signal</div>
           <div id="gps-card-fix" style="margin-bottom:8px;font-size:13px;color:var(--muted)">● No signal</div>
           <table style="border-collapse:collapse;width:100%">
-            <tr><td style="color:var(--muted);padding-right:10px;padding-bottom:4px">Sats</td><td id="gps-card-sats" style="font-family:monospace;color:var(--text)">—</td></tr>
-            <tr><td style="color:var(--muted);padding-bottom:4px">Lat</td><td id="gps-card-lat" style="font-family:monospace;color:var(--text)">—</td></tr>
-            <tr><td style="color:var(--muted);padding-bottom:4px">Lon</td><td id="gps-card-lon" style="font-family:monospace;color:var(--text)">—</td></tr>
-            <tr><td style="color:var(--muted);padding-bottom:4px">Alt</td><td id="gps-card-alt" style="font-family:monospace;color:var(--text)">—</td></tr>
-            <tr><td style="color:var(--muted)">Speed</td><td id="gps-card-speed" style="font-family:monospace;color:var(--text)">—</td></tr>
+            <tr><td style="color:var(--muted);padding-right:10px;padding-bottom:4px">Sats</td><td id="gps-card-sats" style="font-family:monospace;color:var(--text)">-</td></tr>
+            <tr><td style="color:var(--muted);padding-bottom:4px">Lat</td><td id="gps-card-lat" style="font-family:monospace;color:var(--text)">-</td></tr>
+            <tr><td style="color:var(--muted);padding-bottom:4px">Lon</td><td id="gps-card-lon" style="font-family:monospace;color:var(--text)">-</td></tr>
+            <tr><td style="color:var(--muted);padding-bottom:4px">Alt</td><td id="gps-card-alt" style="font-family:monospace;color:var(--text)">-</td></tr>
+            <tr><td style="color:var(--muted)">Speed</td><td id="gps-card-speed" style="font-family:monospace;color:var(--text)">-</td></tr>
           </table>
         </div>
       </div>
@@ -2258,7 +2258,7 @@
         <button class="btn-primary" onclick="saveMapTilerKey()">Save</button>
       </div>
       <div id="mt-key-status" style="font-size:12px;color:var(--muted);margin-top:6px;min-height:16px"></div>
-      <p style="color:var(--muted);font-size:12px;margin:16px 0 10px 0">Required for CARTO layers (Voyager, Voyager No Labels, Positron, Dark Matter, Dark No Labels). The app ships no key of its own — these layers stayed broken after the shared one was rotated (CARTO answers a revoked key with HTTP 403), so each user needs their own. Get one at <a href="https://carto.com/" target="_blank" style="color:var(--accent)">carto.com</a>.</p>
+      <p style="color:var(--muted);font-size:12px;margin:16px 0 10px 0">Required for CARTO layers (Voyager, Voyager No Labels, Positron, Dark Matter, Dark No Labels). The app ships no key of its own. These layers stayed broken after the shared one was rotated (CARTO answers a revoked key with HTTP 403), so each user needs their own. Get one at <a href="https://carto.com/" target="_blank" style="color:var(--accent)">carto.com</a>.</p>
       <div class="settings-row" style="align-items:flex-end;gap:8px;max-width:480px">
         <div style="flex:1">
           <label class="settings-label" for="carto-api-key-input">CARTO API key</label>
@@ -2304,7 +2304,7 @@
       </div>
       <div class="settings-row" style="align-items:center;gap:8px">
         <span class="settings-label">Cached tiles</span>
-        <span id="tile-cache-count" style="color:var(--muted);font-size:12px">—</span>
+        <span id="tile-cache-count" style="color:var(--muted);font-size:12px">-</span>
         <button class="btn-sm" style="margin-left:auto" onclick="clearTileCache(this)" title="Delete all cached map tiles from browser storage">Clear cache</button>
       </div>
 
@@ -2322,7 +2322,7 @@
       <div style="color:var(--muted);font-size:11px;margin:3px 0 6px 12px">
         0 = only the zoom level you're viewing now<br>
         2 = current zoom + 2 levels deeper (more detail, more tiles)<br>
-        4 = maximum — can be a very large download
+        4 = maximum. Can be a very large download
       </div>
       <div id="tile-estimate" style="color:var(--muted);font-size:11px;margin:2px 0 6px 0;padding-left:2px"></div>
       <div class="settings-row" style="align-items:center;gap:8px">

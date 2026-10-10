@@ -499,7 +499,7 @@
   </style>
 </head>
 <body{% if exposed_no_auth %} class="exposed-active"{% endif %}>
-<div id="exposed-banner" title="This instance is bound to {{ bind_host }} with no login enabled. Anyone who can reach it can send RF and control it. Enable a password or bind to 127.0.0.1 (see README → Security).">⚠ No login enabled — reachable on your network ({{ bind_host }})
+<div id="exposed-banner" title="This instance is bound to {{ bind_host }} with no login enabled. Anyone who can reach it can send RF and control it. Enable a password or bind to 127.0.0.1 (see README → Security).">⚠ No login enabled. Reachable on your network ({{ bind_host }})
   <button onclick="dismissExposedBanner(this)" style="margin-left:12px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.35);color:#fecaca;padding:1px 10px;border-radius:4px;cursor:pointer;font-size:11px" title="Hide this warning until the instance is no longer exposed (stays hidden across restarts)">✕ Don't show again</button>
 </div>
 <div id="app-topo-bg"></div>
@@ -515,7 +515,7 @@
   <div class="hdr-sep"></div>
   <div id="hdr-radio">
     <span id="hdr-radio-dot"></span>
-    <span id="hdr-radio-name">—</span>
+    <span id="hdr-radio-name">-</span>
   </div>
   <div class="hdr-sep"></div>
   <div id="hdr-clock">
