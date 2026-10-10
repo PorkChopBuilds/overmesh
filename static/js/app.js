@@ -2715,7 +2715,12 @@ if (targetEl) {
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(payload)
         });
-        if (!r.ok) throw new Error(await r.text());
+        if (!r.ok) {
+          // Surface the server's message ("Empty message" etc.), not the raw
+          // JSON body (EST-83 B11).
+          const d = await r.json().catch(() => ({}));
+          throw new Error(d.error || `HTTP ${r.status}`);
+        }
       } catch(e) {
         input.value = text;
         showAlert(String(e?.message || e || 'Send failed.'));
@@ -2846,7 +2851,15 @@ if (targetEl) {
     fetch(BASE_PATH + `/api/mc/contacts/${encodeURIComponent(id)}/ignore`, {
       method: 'PATCH', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ignored: !currentlyIgnored})
-    }).then(() => {
+    }).then(async r => {
+      if (!r.ok) {
+        // Do NOT apply the local (optimistic) change: on HTTP failure the row
+        // would silently snap back on the next refresh ("I muted it but it came
+        // back") with no explanation. EST-83 B9.
+        const d = await r.json().catch(() => ({}));
+        showAlert(d.error || `Failed to update ignore state (HTTP ${r.status})`);
+        return;
+      }
       if (!currentlyIgnored) mcIgnored.add(id); else mcIgnored.delete(id);
       renderLive();
       // renderLive() only redraws the list — the maps need their own refresh or
@@ -2855,7 +2868,10 @@ if (targetEl) {
       renderMcMapMarkers();
       if (pipOpen) updatePipMarkers(allNodes);
       if (currentView === 'history') loadHistory();
-    }).catch(e => console.error('ignoreMcContact failed:', e));
+    }).catch(e => {
+      console.error('ignoreMcContact failed:', e);
+      showAlert('Failed to update ignore state: ' + (e?.message || e));
+    });
   }
 
   let _mcDeleteTarget = null;
@@ -2951,10 +2967,20 @@ if (targetEl) {
       method: 'PATCH',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ is_ignored: !currentState, radio_id: radioId || null })
-    }).then(() => {
+    }).then(async r => {
+      if (!r.ok) {
+        // The list is reloaded from the server, so a failure already leaves the
+        // row unchanged — but silently. Say so (EST-83 B9).
+        const d = await r.json().catch(() => ({}));
+        showAlert(d.error || `Failed to update ignore state (HTTP ${r.status})`);
+        return;
+      }
       if (currentView === 'live') loadLive();
       else loadHistory();
-    }).catch(e => console.error('ignoreNode failed:', e));
+    }).catch(e => {
+      console.error('ignoreNode failed:', e);
+      showAlert('Failed to update ignore state: ' + (e?.message || e));
+    });
   }
 
   // ── Live sort ──────────────────────────────────────────────────────────────
@@ -9134,8 +9160,17 @@ if (targetEl) {
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({ text, channel: 0, dest_id: mapDmContactId, radio_id: activeRadioId })
         });
-        if (!r.ok) throw new Error(await r.text());
-      } catch(e) { console.error('Map DM send failed:', e); }
+        if (!r.ok) {
+          const d = await r.json().catch(() => ({}));
+          throw new Error(d.error || `HTTP ${r.status}`);
+        }
+      } catch(e) {
+        // The box was cleared before the request; put the text back so it is
+        // not lost, and say what happened (EST-83 B10).
+        input.value = text;
+        showAlert(String(e?.message || e || 'Send failed.'));
+        console.error('Map DM send failed:', e);
+      }
     };
     if (_silentMode) { showSilentConfirm('Sending is not possible while Silent Running is enabled.'); return; }
     await doSend();
@@ -19301,15 +19336,25 @@ async function doMcStatusReq(pubkeyPrefix, radioId, name) {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body
-    }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(d => {
-      if (!d.ok) {
-        // Sense didn't start — restore previous run state
+    }).then(async r => {
+      // Read the body even on failure: a known cooldown comes back as HTTP 429
+      // {ok:false, cooldown_remaining}. Throwing on !r.ok before reading it made
+      // the cooldown branch below unreachable dead code, so tapping Sense during
+      // a known cooldown did nothing visible (EST-83 B5). The normal cooldown
+      // bar path (senseCooldownTick) is unchanged.
+      const d = await r.json().catch(() => ({}));
+      if (r.status === 429) {
         _senseRunId = _prevRunId;
-        document.getElementById('sense-status').textContent =
-          `Cooldown: ${senseCooldownLabel(d.cooldown_remaining)} remaining`;
+        const st = document.getElementById('sense-status');
+        if (st) st.textContent = `Cooldown: ${senseCooldownLabel(d.cooldown_remaining)} remaining`;
         senseCooldownTick(d.cooldown_remaining);
-        return;
+        return null;
       }
+      if (!r.ok) throw new Error(d.error || r.status);
+      return d;
+    }).then(d => {
+      if (!d) return;                     // cooldown / handled above
+      if (!d.ok) { _senseRunId = _prevRunId; return; }
       // Dim existing nodes — they'll be un-dimmed if they respond, removed if they don't
       document.querySelectorAll('#sense-nodes .sense-node-card').forEach(c => {
         c.style.opacity = '0.6';
