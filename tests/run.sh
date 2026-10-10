@@ -19,6 +19,7 @@ fi
 node tests/test_mc_path_template.js
 node tests/test_mc_cleanup_favourites.js
 node tests/test_update_notice.js
+node tests/test_waypoint_dialog.js
 node tests/test_message_notif_layout.js
 
 # JS lint (no-undef) — the only check that sees client-side ReferenceErrors,

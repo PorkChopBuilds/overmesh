@@ -74,6 +74,23 @@ const showFn = src.match(/function showUpdateNotice\([\s\S]*?\n  \}/);
 assert(showFn, 'showUpdateNotice() body must be found');
 assert(!/showToast\(/.test(showFn[0]), 'the update notice must not use the corner toast any more');
 
+// Drive the REAL text builder, not a copy: version line normally, commit on
+// equal/missing versions.
+const txtMatch = src.match(/function _updateBannerText\([\s\S]*?\n  \}/);
+assert(txtMatch, '_updateBannerText() must be extractable');
+const escHtml = s => String(s == null ? '' : s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const _updateBannerText = new Function('escHtml', 'return ' + txtMatch[0])(escHtml);
+assert(_updateBannerText('abc1234', '2026.10.01.1', '2026.09.12.9') ===
+       'OverMesh 2026.10.01.1 is available (you have 2026.09.12.9)',
+       'different versions -> the version line (got ' + _updateBannerText('abc1234', '2026.10.01.1', '2026.09.12.9') + ')');
+assert(_updateBannerText('abc1234', '2026.10.01.1', '2026.10.01.1') ===
+       'OverMesh abc1234 is available (you have 2026.10.01.1)',
+       'equal versions -> the short commit');
+assert(_updateBannerText('abc1234', null, '2026.09.12.9') ===
+       'OverMesh abc1234 is available (you have 2026.09.12.9)',
+       'missing remote version -> the short commit');
+
 // ── Settings block shows Installed / Available ────────────────────────────────
 assert(/Installed: <code>\$\{escHtml\(info\.local_version/.test(src),
        'the Settings block must show "Installed: <local_version> (<commit>)"');
