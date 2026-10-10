@@ -10,6 +10,10 @@ OverMesh uses date-based release versions:
 
 The version in `VERSION` must be updated every time an OverMesh update is pushed to GitHub. The Settings updater also shows the Git commit hash for exact build identification.
 
+## 2026.10.11.2
+
+- Fix: messages heard directly from a nearby radio no longer show a "path likely" badge when OverMesh can confirm the packet.
+
 ## 2026.10.11.1
 
 - Housekeeping batch. On-screen text no longer contains em dashes (the long dashes in labels, tooltips, pop-ups and error messages are gone).

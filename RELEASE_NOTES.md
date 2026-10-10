@@ -1,5 +1,11 @@
 # OverMesh Release Notes
 
+## 2026.10.11.2
+
+### Fixed
+
+- Messages heard directly from a nearby radio no longer show a "path likely" badge when OverMesh can confirm the packet.
+
 ## 2026.10.11.1
 
 This is a housekeeping release. There is nothing new to learn, but a lot of small things that were wrong, unclear or quietly broken are now fixed.
