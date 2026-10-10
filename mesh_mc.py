@@ -1213,6 +1213,11 @@ _mc_recent_rx_logs: dict[str, list[dict]] = {}  # radio id -> recent RX_LOG_DATA
 # event only carries channel_idx, so this cache is how a decoded message gets an
 # expected channel hash to compare a relayed packet's RX chan_hash against.
 _mc_channel_hashes: dict[str, dict[int, str]] = {}
+# Overall budget for the one-time post-connect channel read that primes the hash
+# cache. The connect coroutine is itself awaited under a 120 s timeout
+# (connect_mc_node), and a radio that times out on a slot read would otherwise
+# stack 5 s per slot; this keeps the prime well inside the connect ceiling.
+MC_CHANNEL_HASH_PRIME_BUDGET_S = 20.0
 _mc_recent_messages: dict[str, list[dict]] = {}  # radio id -> recent inbound mc_message dicts
 _mc_drain_active: set[str] = set()
 _mc_drain_pending: set[str] = set()   # fired MESSAGES_WAITING while drain was active — re-drain on finish
@@ -2864,6 +2869,16 @@ async def _connect_mc_node_async(node_cfg):
         )
     except Exception as auto_e:
         log.warning(f"[MC:{name}] Could not apply auto-add preference: {auto_e}")
+
+    # Prime the channel-hash cache once, here, so relayed channel traffic can be
+    # matched even when no browser ever fetches /api/mc/<id>/channels (the only
+    # other place that filled this cache). Same non-fatal pattern as the scope
+    # re-apply above; mc is passed directly because this runs before publish.
+    try:
+        primed = await _prime_mc_channel_hashes_async(mc, config_id, name, node_info)
+        log.info(f"[MC:{name}] Primed {primed} channel hash(es) for RX correlation")
+    except Exception as prime_e:
+        log.warning(f"[MC:{name}] Could not prime channel hashes (non-fatal): {prime_e}")
 
     node_id = node_info.get("public_key", "")[:12]  # 6-byte pubkey prefix as ID
 
@@ -4552,12 +4567,24 @@ async def _reboot_async(config_id):
     return await mc.commands.reboot()
 
 
-async def _get_channels_async(config_id, count):
-    mc, _ = _get_mc(config_id)
+async def _get_channels_async(config_id, count, mc=None, budget_s=None):
+    if mc is None:
+        mc, _ = _get_mc(config_id)
+    # budget_s bounds the whole read when the caller cannot afford a timeout on
+    # every slot (the post-connect hash prime runs inside connect's own 120 s
+    # ceiling). None keeps the original per-slot behaviour for the UI path.
+    loop = asyncio.get_running_loop()
+    deadline = (loop.time() + float(budget_s)) if budget_s else None
     channels = []
     for i in range(count):
+        slot_timeout = 5
+        if deadline is not None:
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                break
+            slot_timeout = min(slot_timeout, remaining)
         try:
-            r = await asyncio.wait_for(mc.commands.get_channel(i), timeout=5)
+            r = await asyncio.wait_for(mc.commands.get_channel(i), timeout=slot_timeout)
             if r.type == EventType.CHANNEL_INFO:
                 channels.append(r.payload)
             else:
@@ -4570,6 +4597,34 @@ async def _get_channels_async(config_id, count):
     # against a relayed RX packet's channel hash (see _rx_channel_hash_matches).
     _remember_mc_channel_hashes(config_id, channels)
     return channels
+
+
+async def _prime_mc_channel_hashes_async(mc, config_id, name, node_info=None):
+    """Read the device channel list once after connect and cache idx -> hash.
+
+    The hash cache is what lets a decoded channel message be matched to a relayed
+    RX packet (see _rx_channel_hash_matches). It was only ever filled when a
+    browser fetched /api/mc/<id>/channels, so a headless instance (no browser
+    open, restarted on every update) scored relayed channel traffic on timing
+    alone. Non-fatal by contract: failures are swallowed here, the connect
+    proceeds, and the cache keeps whatever was read before a failure.
+
+    mc is passed directly: this runs before the connection is published to
+    mc_connections, so _get_mc would raise "Not connected" here.
+    """
+    try:
+        reported = int((node_info or {}).get("max_channels") or 0)
+    except (TypeError, ValueError):
+        reported = 0
+    # Floor at 8: the pre-GH#20 hardcoded MC ceiling, matching _mc_max_channels.
+    count = max(8, reported)
+    try:
+        await _get_channels_async(
+            config_id, count, mc=mc, budget_s=MC_CHANNEL_HASH_PRIME_BUDGET_S,
+        )
+    except Exception as e:
+        log.warning(f"[MC:{name}] Channel hash prime failed (non-fatal): {e}")
+    return len(_mc_channel_hashes.get(config_id) or {})
 
 
 async def _set_channel_async(config_id, idx, name, key_hex=None):
