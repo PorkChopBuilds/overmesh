@@ -1521,7 +1521,7 @@ async def _force_contact_flood_if_configured(mc, config_id, full_key, contact, r
 
 def _ensure_mc_tx_allowed(action="MC transmission"):
     if CONFIG.get("silent_mode"):
-        raise RuntimeError(f"Silent Running active — {action} blocked")
+        raise RuntimeError(f"Silent Running active: {action} blocked")
 
 
 def _mc_tx_allowed_soft(context):
@@ -4063,7 +4063,7 @@ def import_mc_contact(config_id, share_link_or_hex, timeout=15):
         try:
             card_data = bytes.fromhex(raw)
         except ValueError:
-            raise ValueError("Invalid share link — could not hex-decode the payload")
+            raise ValueError("Invalid share link: could not hex-decode the payload")
         if len(card_data) < 33:
             raise ValueError("Share link payload too short to be a valid contact card")
         return run_mc(_import_contact_async(config_id, card_data=card_data), timeout=timeout)

@@ -1360,5 +1360,5 @@ def _haversine(lat1, lon1, lat2, lon2):
 
 def _format_ts(ts):
     if not ts:
-        return "—"
+        return "-"
     return datetime.fromtimestamp(ts).strftime("%d-%m-%y %H:%M")

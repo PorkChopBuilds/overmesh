@@ -45,7 +45,7 @@ def _run_sense_broadcast(iface, cooldown):
             _sense_state["active"] = False
             count = len(_sense_state["responses"])
         push_to_sse(json.dumps({"type": "sense_done", "count": count,
-                                "error": "Silent Running active — broadcast blocked"}))
+                                "error": "Silent Running active: broadcast blocked"}))
         return
     try:
         send_position_request(iface)

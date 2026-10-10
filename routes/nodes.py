@@ -613,7 +613,7 @@ def api_traceroute(node_id):
                             "token": token, "cancelled": False})
     try:
         if CONFIG.get("silent_mode"):
-            return jsonify({"error": "Silent Running active — transmissions are blocked"}), 409
+            return jsonify({"error": "Silent Running active: transmissions are blocked"}), 409
         try:
             _send_traceroute_probe(iface, node_id, hop_limit)
         except Exception as e:
@@ -629,7 +629,7 @@ def api_traceroute(node_id):
     if result.get("_cancelled"):
         return jsonify({"error": "Traceroute was cancelled."}), 409
     if not done.is_set():
-        return jsonify({"error": "Timeout — node did not respond (30s)"}), 504
+        return jsonify({"error": "Timeout: node did not respond (30s)"}), 504
 
     my_name    = "You"
     dest_name  = get_node_name(node_id)
@@ -710,7 +710,7 @@ def api_dm(node_id):
         return jsonify({"error": "No radio connected"}), 503
     try:
         if CONFIG.get("silent_mode"):
-            return jsonify({"error": "Silent Running active — transmissions are blocked"}), 409
+            return jsonify({"error": "Silent Running active: transmissions are blocked"}), 409
         sent    = iface.sendText(msg, destinationId=node_id, wantAck=True)
         pkt_id  = sent.id if hasattr(sent, "id") else (sent.get("id") if isinstance(sent, dict) else None)
         chat_msg = {
@@ -755,7 +755,7 @@ def api_request_position(node_id):
         return jsonify({"error": "No radio connected"}), 503
     try:
         if CONFIG.get("silent_mode"):
-            return jsonify({"error": "Silent Running active — transmissions are blocked"}), 409
+            return jsonify({"error": "Silent Running active: transmissions are blocked"}), 409
         iface.sendPosition(destinationId=node_id, wantResponse=True)
         return jsonify({"ok": True})
     except Exception as e:
@@ -833,7 +833,7 @@ def api_node_info(node_id):
 
     try:
         if CONFIG.get("silent_mode"):
-            return jsonify({"error": "Silent Running active — transmissions are blocked"}), 409
+            return jsonify({"error": "Silent Running active: transmissions are blocked"}), 409
         pub.subscribe(on_receive, "meshtastic.receive")
         iface.sendTelemetry(destinationId=node_id, wantResponse=True,
                             telemetryType=tele_type)

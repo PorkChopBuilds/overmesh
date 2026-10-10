@@ -422,7 +422,7 @@ def _run_update_job():
         changed_files = set(changed.splitlines()) if rc == 0 and changed else set()
 
         if info.get("dirty"):
-            _update_append("Local changes detected — stashing before update...")
+            _update_append("Local changes detected: stashing before update...")
             _git_cmd(["stash", "--include-untracked"], timeout=15)
 
         # A stale skip-worktree/assume-unchanged index flag makes `git reset
@@ -1223,7 +1223,7 @@ def api_settings_mc_nodes_auto_add_contacts(node_id):
                 manual_active = device_manual
         except Exception as e:
             log.warning(f"[MC:{node_id}] auto_add_contacts {enabled} failed: {e}")
-            warning = ("Radio did not accept the auto-add command — it keeps its "
+            warning = ("Radio did not accept the auto-add command. It keeps its "
                        "current behaviour until it is reflashed with firmware that "
                        "supports manual contact mode.")
 

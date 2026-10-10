@@ -29,7 +29,7 @@ def api_send_waypoint():
     data = request.get_json(silent=True) or {}
     log.info(f"Mark send received: destination_ids={data.get('destination_ids')!r}")
     if CONFIG.get("silent_mode"):
-        return jsonify({"error": "Silent Running active — transmissions are blocked"}), 409
+        return jsonify({"error": "Silent Running active: transmissions are blocked"}), 409
     name = (data.get("name") or "").strip()[:30]
     try:
         lat = float(data.get("lat", 0))
@@ -136,7 +136,7 @@ def api_send_waypoint():
                     u = local_node.get("user", {})
                     my_name = u.get("longName") or u.get("shortName") or "?"
             dt_str     = datetime.now().strftime("%H:%M %d.%m.%Y")
-            notif_text = f"📍 Mark \"{name}\" by {my_name} at {lat:.4f},{lon:.4f} — {dt_str}"
+            notif_text = f"📍 Mark \"{name}\" by {my_name} at {lat:.4f},{lon:.4f}: {dt_str}"
             notif_targets = dest_ids if dest_ids else [None]
             for nd in notif_targets:
                 if nd:
@@ -169,7 +169,7 @@ def api_edit_waypoint(wp_id):
     if not wp_data:
         return jsonify({"error": "Mark not found"}), 404
     if CONFIG.get("silent_mode"):
-        return jsonify({"error": "Silent Running active — transmissions are blocked"}), 409
+        return jsonify({"error": "Silent Running active: transmissions are blocked"}), 409
     data = request.get_json(silent=True) or {}
     name = (data.get("name") or "").strip()[:30]
     if not name:
@@ -264,7 +264,7 @@ def api_delete_waypoint(wp_id):
     # Send mesh deletion packet on the same channel/destination it was originally sent to
     try:
         if CONFIG.get("silent_mode"):
-            raise RuntimeError("Silent Running active — mesh delete broadcast skipped")
+            raise RuntimeError("Silent Running active: mesh delete broadcast skipped")
         radio_id = (wp_data.get("radio_id") or "").strip() if wp_data else ""
         if radio_id:
             iface = get_iface_by_radio(radio_id)
@@ -307,7 +307,7 @@ def api_rebroadcast_waypoint(wp_id):
     if not wp_data:
         return jsonify({"error": "Mark not found"}), 404
     if CONFIG.get("silent_mode"):
-        return jsonify({"error": "Silent Running active — transmissions are blocked"}), 409
+        return jsonify({"error": "Silent Running active: transmissions are blocked"}), 409
     try:
         radio_id = (wp_data.get("radio_id") or "").strip()
         if radio_id:

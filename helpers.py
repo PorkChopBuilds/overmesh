@@ -211,7 +211,7 @@ def get_node_data():
             result.append({
                 "radio_id": node_id, "radio_name": node_name,
                 "radio_status": status, "id": None,
-                "long_name": "—", "short_name": "—",
+                "long_name": "-", "short_name": "-",
                 "snr": None, "rssi": None, "battery": None,
                 "last_heard": None, "last_heard_ts": 0,
                 "hops_away": None, "latitude": None, "longitude": None,

@@ -648,7 +648,7 @@ def api_radio_config_mqtt(radio_id):
                 return jsonify({"error": "mqtt_map_interval must be a number"}), 400
             if secs < 3600:
                 return jsonify({"error": "Map report interval minimum is 3600 s "
-                                         "(1 hour) — the firmware's documented minimum."}), 400
+                                         "(1 hour): the firmware's documented minimum."}), 400
             mqtt.map_report_settings.publish_interval_secs = min(secs, 86400)
         if data.get("mqtt_map_precision"):
             try:
@@ -793,7 +793,7 @@ def api_radio_channel_import(radio_id):
             try:
                 fut.result(timeout=15)
             except concurrent.futures.TimeoutError:
-                return jsonify({"error": "Node did not confirm write (timeout). Channel may still have been saved — check node channels."}), 504
+                return jsonify({"error": "Node did not confirm write (timeout). Channel may still have been saved. Check node channels."}), 504
         return jsonify({"ok": True, "name": name, "index": ch_index, "psk_set": bool(psk)})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -846,7 +846,7 @@ def api_radio_channel_set(radio_id, ch_index):
                         import base64
                         psk_bytes = base64.b64decode(psk_hex, validate=True)
                     except Exception:
-                        return jsonify({"error": "Invalid key — enter as hex or base64"}), 400
+                        return jsonify({"error": "Invalid key. Enter as hex or base64"}), 400
                 ch.settings.psk = psk_bytes
             # else "keep" — don't touch psk
             if "uplink_enabled" in data:

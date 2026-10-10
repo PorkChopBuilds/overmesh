@@ -84,7 +84,7 @@ def api_gps_push():
         alt  = gps_state.get("alt") or 0
         fix  = gps_state.get("fix", False)
     if not fix or lat is None or lon is None:
-        return jsonify({"error": "No GPS fix — cannot push position"}), 400
+        return jsonify({"error": "No GPS fix: cannot push position"}), 400
     precision_bits = CONFIG.get("gps", {}).get("precision", 32)
     threading.Thread(target=_gps_push_to_nodes, args=(lat, lon, alt, precision_bits), daemon=True).start()
     return jsonify({"ok": True, "pushed": ["all connected"]})

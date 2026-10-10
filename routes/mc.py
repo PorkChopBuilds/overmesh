@@ -124,20 +124,20 @@ def _mc_friendly_device_error(result_or_text):
     if isinstance(payload, dict):
         code = payload.get("error_code")
     if code == 1 or "err_code_unsupported" in text or "unsupported cmd" in text:
-        return ("The radio's firmware doesn't support this — update the node to "
+        return ("The radio's firmware doesn't support this. Update the node to "
                 "the latest MeshCore companion release.")
     if code == 2 or "err_code_not_found" in text:
-        return ("This contact isn't stored on the radio — in manual-approval mode "
+        return ("This contact isn't stored on the radio. In manual-approval mode "
                 "add it to the radio first (Add to radio in the contacts list), "
                 "or switch the radio back to auto-add in MC settings.")
     if code == 3 or "err_code_table_full" in text or "table full" in text:
-        return ("The radio's contact table is full — remove stale contacts "
+        return ("The radio's contact table is full. Remove stale contacts "
                 "(cleanup), then try again.")
     if code == 4 or "err_code_bad_state" in text:
-        return ("The radio couldn't do that in its current state — wait a few "
+        return ("The radio couldn't do that in its current state. Wait a few "
                 "seconds and retry.")
     if code == 6 or "err_code_illegal" in text:
-        return "That request was invalid for this radio — check the contact."
+        return "That request was invalid for this radio. Check the contact."
     return None
 
 
@@ -194,7 +194,7 @@ def _mc_lookup_full_contact(radio_id, prefix):
     if not found:
         raise KeyError("contact not found in OverMesh")
     if len(found) > 1:
-        raise ValueError("pubkey prefix is ambiguous — use a longer prefix")
+        raise ValueError("pubkey prefix is ambiguous. Use a longer prefix")
     full_key, rec = next(iter(found.items()))
     return full_key, (rec or {})
 
@@ -761,7 +761,7 @@ def api_mc_send_chan(radio_id):
     data = request.get_json(silent=True) or {}
     text = (data.get("text") or "").strip()
     if CONFIG.get("silent_mode"):
-        return jsonify({"error": "Silent Running active — transmissions are blocked"}), 409
+        return jsonify({"error": "Silent Running active: transmissions are blocked"}), 409
     try:
         chan = int(data.get("channel", 0))
     except (TypeError, ValueError):
@@ -817,7 +817,7 @@ def api_mc_send_dm(radio_id):
     text   = (data.get("text") or "").strip()
     target = (data.get("target") or "").strip()   # pubkey prefix (≥6 chars)
     if CONFIG.get("silent_mode"):
-        return jsonify({"error": "Silent Running active — transmissions are blocked"}), 409
+        return jsonify({"error": "Silent Running active: transmissions are blocked"}), 409
     if not text:
         return jsonify({"error": "text is required"}), 400
     if not target or len(target) < 6:
@@ -870,7 +870,7 @@ def api_mc_statusreq(radio_id, node_id):
     """
     log.info(f"[MC] statusreq route called: radio={radio_id} node={node_id[:12] if node_id else '?'}")
     if CONFIG.get("silent_mode"):
-        return jsonify({"error": "Silent Running active — transmissions are blocked"}), 409
+        return jsonify({"error": "Silent Running active: transmissions are blocked"}), 409
     if not node_id or len(node_id) < 6:
         return jsonify({"error": "node_id (pubkey prefix) required"}), 400
     data = request.get_json(silent=True) or {}
@@ -968,7 +968,7 @@ def api_mc_advert(radio_id):
     data  = request.get_json(silent=True) or {}
     flood = bool(data.get("flood", False))
     if CONFIG.get("silent_mode"):
-        return jsonify({"error": "Silent Running active — transmissions are blocked"}), 409
+        return jsonify({"error": "Silent Running active: transmissions are blocked"}), 409
     try:
         result = send_advert(radio_id, flood=flood) or {}
     except RuntimeError as e:
@@ -1384,7 +1384,7 @@ def api_mc_scan(radio_id):
     """Flood-advertise on MC mesh and collect mc_node SSE events for 60s."""
     import json
     if CONFIG.get("silent_mode"):
-        return jsonify({"error": "Silent Running active — transmissions are blocked"}), 409
+        return jsonify({"error": "Silent Running active: transmissions are blocked"}), 409
     with mc_connections_lock:
         state = mc_connections.get(radio_id, {})
     if state.get("status") != "connected":
@@ -1444,7 +1444,7 @@ def api_mc_trace(radio_id):
     """Send a broadcast trace packet. Response arrives via SSE as mc_trace_data.
     TRACE_DATA (0x89) is a push notification so it works even where STATUS_RESPONSE doesn't."""
     if CONFIG.get("silent_mode"):
-        return jsonify({"error": "Silent Running active — transmissions are blocked"}), 409
+        return jsonify({"error": "Silent Running active: transmissions are blocked"}), 409
     with mc_connections_lock:
         state = mc_connections.get(radio_id, {})
     if state.get("status") != "connected":
@@ -1512,7 +1512,7 @@ def api_mc_debug_events(radio_id):
 def api_mc_import_contact(radio_id):
     """Import a contact from a meshcore:// share link into the radio's NVS contact list."""
     if CONFIG.get("silent_mode"):
-        return jsonify({"error": "Silent Running active — transmissions are blocked"}), 409
+        return jsonify({"error": "Silent Running active: transmissions are blocked"}), 409
     with mc_connections_lock:
         state = mc_connections.get(radio_id, {})
     if state.get("status") != "connected":
@@ -1545,7 +1545,7 @@ def api_mc_store_contact(radio_id, contact_id):
     record is taken from OM's live/archive store. Already-on-the-radio contacts
     are a no-op (409) so the UI can't double-add."""
     if CONFIG.get("silent_mode"):
-        return jsonify({"error": "Silent Running active — transmissions are blocked"}), 409
+        return jsonify({"error": "Silent Running active: transmissions are blocked"}), 409
     with mc_connections_lock:
         state = mc_connections.get(radio_id, {})
     if state.get("status") != "connected":
@@ -1560,7 +1560,7 @@ def api_mc_store_contact(radio_id, contact_id):
         self_pub = (mc_connections.get(radio_id, {}).get("node_info", {}) or {}).get("public_key", "")
         live_keys = set((mc_connections.get(radio_id, {}).get("live_contacts", {}) or {}).keys())
     if self_pub and full_key.lower() == str(self_pub).lower():
-        return jsonify({"error": "That's this radio's own key — nothing to store."}), 400
+        return jsonify({"error": "That's this radio's own key: nothing to store."}), 400
     if full_key in live_keys:
         return jsonify({"error": "This contact is already stored on the radio."}), 409
     payload = _mc_contact_device_payload(full_key, rec)

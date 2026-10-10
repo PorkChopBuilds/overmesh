@@ -131,7 +131,7 @@ def api_chat_send():
     data    = request.get_json(silent=True) or {}
     text    = (data.get("text") or "").strip()
     if CONFIG.get("silent_mode"):
-        return jsonify({"error": "Silent Running active — transmissions are blocked"}), 409
+        return jsonify({"error": "Silent Running active: transmissions are blocked"}), 409
     try:
         channel = max(0, min(7, int(data.get("channel", 0))))
     except (TypeError, ValueError):
@@ -159,7 +159,7 @@ def api_chat_send():
             try:
                 sent = fut.result(timeout=8)
             except concurrent.futures.TimeoutError:
-                return jsonify({"error": "Radio send timed out — node may be unresponsive"}), 504
+                return jsonify({"error": "Radio send timed out: node may be unresponsive"}), 504
         pkt_id = sent.id if hasattr(sent, "id") else (sent.get("id") if isinstance(sent, dict) else None)
         # Resolve my own name
         my_name = "You"
