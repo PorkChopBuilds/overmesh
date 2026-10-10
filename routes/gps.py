@@ -79,6 +79,8 @@ def api_settings_gps_set():
 @bp.route("/api/gps/push", methods=["POST"])
 def api_gps_push():
     import threading
+    if CONFIG.get("silent_mode"):
+        return jsonify({"error": "Silent Running active: transmissions are blocked"}), 409
     with gps_lock:
         lat  = gps_state.get("lat")
         lon  = gps_state.get("lon")

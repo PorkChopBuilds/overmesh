@@ -44,6 +44,26 @@ _gps_runtime = {
     "source": "",
 }
 
+_gps_silent_suppressed = False   # one-shot log guard for Silent Running (see _gps_tx_blocked)
+
+
+def _gps_tx_blocked(context="GPS push"):
+    """True when Silent Running must block a GPS transmission.
+
+    Logs once per transition (not on every auto-push tick), so the journal shows
+    why positions stopped being pushed without flooding while silent. Mirrors the
+    app-layer gating the rest of the send paths use.
+    """
+    global _gps_silent_suppressed
+    silent = bool(CONFIG.get("silent_mode"))
+    if silent and not _gps_silent_suppressed:
+        _gps_silent_suppressed = True
+        log.info("[gps] Silent Running active — %s suppressed", context)
+    elif not silent and _gps_silent_suppressed:
+        _gps_silent_suppressed = False
+        log.info("[gps] Silent Running cleared — %s resumed", context)
+    return silent
+
 
 def _is_internal_uart(port: str) -> bool:
     return os.path.basename(str(port or "")).startswith("ttyAS")
@@ -106,7 +126,7 @@ def _parse_gpgga(line):
         # Auto-push to connected nodes if enabled and rate-limit allows
         if fix_q > 0 and lat is not None and lon is not None:
             gps_cfg = CONFIG.get("gps", {})
-            if gps_cfg.get("auto_push"):
+            if gps_cfg.get("auto_push") and not _gps_tx_blocked("GPS auto-push"):
                 now = time.time()
                 interval = max(10, int(gps_cfg.get("push_interval", _GPS_AUTO_PUSH_INTERVAL)))
                 if now - _gps_last_push_ts >= interval:
@@ -184,6 +204,8 @@ def gps_port_conflict(port):
 
 def _gps_push_to_nodes(lat, lon, alt, precision_bits):
     """Push GPS position to all connected nodes. Called from background thread."""
+    if _gps_tx_blocked("GPS push"):
+        return
     from meshtastic.protobuf import mesh_pb2, admin_pb2
     with connections_lock:
         radio_ids = list(connections.keys())
@@ -390,7 +412,7 @@ def _gps_proxy_reader(proxy_url, fallback_port, stop_event):
             if fix and lat is not None and lon is not None:
                 global _gps_last_push_ts
                 gps_cfg = CONFIG.get("gps", {})
-                if gps_cfg.get("auto_push"):
+                if gps_cfg.get("auto_push") and not _gps_tx_blocked("GPS auto-push"):
                     now = time.time()
                     interval = max(10, int(gps_cfg.get("push_interval", _GPS_AUTO_PUSH_INTERVAL)))
                     if now - _gps_last_push_ts >= interval:
