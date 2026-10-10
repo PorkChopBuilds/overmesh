@@ -87,5 +87,48 @@ class TestRequestFailureFeedback(unittest.TestCase):
                       "B5: the cooldown message + ticker must run on 429")
 
 
+class TestLabelFixes(unittest.TestCase):
+    """C1/C2/C4/C6/H4: one term, one accurate tooltip, named close controls,
+    state in the Silent button, and a visible Debug Events status."""
+
+    def test_c1_zero_precision_is_called_exact_position_everywhere(self):
+        src = _js()
+        html = _html()
+        self.assertEqual(src.count("'Actual position'"), 0,
+                         "C1: precMeterLabel must use the single term 'Exact position'")
+        self.assertEqual(html.count(">Actual position<"), 0,
+                         "C1: the MC precision default must match the other two sliders")
+        m = re.search(r"function precMeterLabel\(m\)\s*\{[^}]*\}", src)
+        self.assertIsNotNone(m)
+        self.assertIn("'Exact position'", m.group(0))
+
+    def test_c2_lora_save_title_names_tx_power(self):
+        self.assertIn(
+            'title="Save LoRa region, modem preset, TX power and hop limit to the node"',
+            _html(), "C2: the Save tooltip must name TX power, which it also writes")
+
+    def test_c4_four_close_controls_have_accessible_name(self):
+        html = _html()
+        for call in ("closeNodeCleanupModal()", "closePolarCustomize()",
+                     "closeMapDM()", "_closeDetailPanel()"):
+            # The tag carrying the close handler must name itself for SR/keyboard users.
+            m = re.search(r"<[^<>]*onclick=\"" + re.escape(call) + r"\"[^<>]*>", html)
+            self.assertIsNotNone(m, f"C4: {call} control not found")
+            tag = m.group(0)
+            self.assertIn('title="Close"', tag, f"C4: {call} needs title=\"Close\"")
+            self.assertIn('aria-label="Close"', tag, f"C4: {call} needs aria-label=\"Close\"")
+
+    def test_c6_silent_button_text_shows_state(self):
+        body = _fn_body(_js(), "_updateSilentUi")
+        self.assertIn("btn.textContent", body,
+                      "C6: the Silent button must show its state in text")
+        self.assertRegex(body, r"Silent ON", "C6: active state must read 'Silent ON'")
+
+    def test_h4_debug_events_shows_status_and_clears(self):
+        body = _fn_body(_js(), "startMcDebugEvents")
+        self.assertIn("Logging serial events for 60 s… (see the server log)", body,
+                      "H4: the MC actions status must explain what is happening")
+
+
 if __name__ == "__main__":
     unittest.main()

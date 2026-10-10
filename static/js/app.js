@@ -59,6 +59,8 @@
     const btn = document.getElementById('silent-btn');
     if (btn) {
       btn.classList.toggle('active', active);
+      // The state must be readable as text, not only as colour (EST-83 C6).
+      btn.textContent = active ? 'Silent ON' : 'Silent';
       btn.title = active
         ? 'Silent Running active. Click to disable'
         : 'Enable Silent Running: suppresses all radio transmissions';
@@ -18857,7 +18859,10 @@ async function doMcStatusReq(pubkeyPrefix, radioId, name) {
       body: JSON.stringify({duration: 60}),
     }).then(r => r.json()).then(d => {
       if (!d.ok) { if (statusEl) statusEl.innerHTML = `<span style="color:var(--red)">${escHtml(d.error||'Failed')}</span>`; return; }
-      if (statusEl) statusEl.innerHTML = '<span style="color:var(--accent)">Debug logging ON. Watch the server log, then send a Ping. Auto-stops in 60s.</span>';
+      // Say it in the panel: the user cannot see the server log from here, and
+      // the old "silent {ok:true}" left them guessing (EST-83 H4). The ticker
+      // below clears it again after 60s.
+      if (statusEl) statusEl.innerHTML = '<span style="color:var(--accent)">Logging serial events for 60 s… (see the server log)</span>';
       if (btn) btn.disabled = true;
       let remaining = 60;
       const t = setInterval(() => {
@@ -20370,7 +20375,7 @@ async function doMcStatusReq(pubkeyPrefix, radioId, name) {
   }
 
   function precMeterLabel(m) {
-    return m === 0 ? 'Actual position' : `~${m} m radius`;
+    return m === 0 ? 'Exact position' : `~${m} m radius`;
   }
   function metersToBit(m) {
     if (m === 0) return 32;

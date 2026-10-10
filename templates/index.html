@@ -68,7 +68,7 @@
   <div class="modal-box" style="width:460px;max-width:94vw">
     <div class="modal-header">
       <span class="modal-title">Clean up stale nodes</span>
-      <button class="modal-close" onclick="closeNodeCleanupModal()">&#10005;</button>
+      <button class="modal-close" onclick="closeNodeCleanupModal()" title="Close" aria-label="Close">&#10005;</button>
     </div>
     <div class="modal-body">
       <p id="node-cleanup-summary" style="margin:0 0 10px;font-size:13px;color:var(--muted)"></p>
@@ -110,7 +110,7 @@
   <div class="modal-box" style="width:300px">
     <div class="modal-header">
       <span class="modal-title">Polar Grid</span>
-      <button class="modal-close" onclick="closePolarCustomize()">&#10005;</button>
+      <button class="modal-close" onclick="closePolarCustomize()" title="Close" aria-label="Close">&#10005;</button>
     </div>
     <div class="modal-body">
       <div style="margin-bottom:16px">
@@ -541,7 +541,7 @@
     <div id="map-dm-window">
       <div id="map-dm-header">
         <span id="map-dm-title">DM</span>
-        <span class="map-dm-close" onclick="closeMapDM()">✕</span>
+        <span class="map-dm-close" onclick="closeMapDM()" title="Close" aria-label="Close">✕</span>
       </div>
       <div id="map-dm-msgs"></div>
       <div id="map-dm-input-row">
@@ -1130,7 +1130,7 @@
             <label class="settings-label">Hop Limit <span style="font-weight:400">(1–7)</span></label>
             <input id="node-cfg-hoplimit" type="number" class="settings-input" min="1" max="7" style="width:55px">
           </div>
-          <button class="btn" onclick="saveNodeLora(this)" title="Save LoRa region, modem preset and hop limit to the node">Save</button>
+          <button class="btn" onclick="saveNodeLora(this)" title="Save LoRa region, modem preset, TX power and hop limit to the node">Save</button>
         </div>
         <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin-top:8px">
           <label style="display:flex;align-items:center;gap:5px;font-size:12px"
@@ -1608,7 +1608,7 @@
         <button class="btn" onclick="saveMcDeviceName(this)" title="Rename device">Rename</button>
       </div>
       <div style="margin-bottom:8px">
-        <label class="settings-label">Precision: <span id="mc-coords-prec-val" style="color:var(--accent)">Actual position</span> <span style="font-weight:400;color:var(--muted)">(slide right = more private)</span></label>
+        <label class="settings-label">Precision: <span id="mc-coords-prec-val" style="color:var(--accent)">Exact position</span> <span style="font-weight:400;color:var(--muted)">(slide right = more private)</span></label>
         <input type="range" id="mc-coords-precision" min="0" max="1000" step="100" value="0" style="width:200px;vertical-align:middle;margin-top:4px"
                oninput="document.getElementById('mc-coords-prec-val').textContent=precMeterLabel(parseInt(this.value))">
       </div>
@@ -2626,7 +2626,7 @@
 <div id="mc-statusreq-panel" style="display:none;position:fixed;bottom:20px;right:12px;z-index:2000;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;width:min(460px,calc(100vw - 24px));max-height:70vh;overflow-y:auto;box-shadow:0 2px 12px rgba(0,0,0,.5)">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
     <span id="mc-statusreq-title" style="font-weight:600;color:var(--text)"></span>
-    <span onclick="_closeDetailPanel()" style="cursor:pointer;color:var(--muted);margin-left:12px">✕</span>
+    <span onclick="_closeDetailPanel()" title="Close" aria-label="Close" style="cursor:pointer;color:var(--muted);margin-left:12px">✕</span>
   </div>
   <div id="mc-statusreq-body" style="color:var(--muted)"></div>
 </div>
