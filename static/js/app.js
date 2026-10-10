@@ -14387,9 +14387,18 @@ if (targetEl) {
   function _mcRxConfidenceMeta(msg) {
     const value = String(msg?.rx_confidence || '').toLowerCase();
     if (!value) return null;
-    if (value === 'high') return { label: 'High confidence', cls: 'high', detail: 'RX copy matched by sender, text, or timestamp where available.' };
-    if (value === 'medium') return { label: 'Medium confidence', cls: 'medium', detail: 'RX copy matched by a tight timing window; channel RX logs may not include full message identity.' };
-    return { label: 'Low confidence', cls: 'low', detail: 'Best-effort path; RX metadata did not strongly identify this exact message.' };
+    // Only surface uncertainty. "high" is the expected case — the shown path was
+    // confirmed by the received packet — so a badge there would be noise on
+    // almost every message. Both render sites share this helper.
+    if (value === 'high') return null;
+    if (value === 'medium') return {
+      label: 'path likely', cls: 'medium',
+      detail: 'OverMesh could not fully confirm which received packet (path, signal) belongs to this message. The message itself is fine.',
+    };
+    return {
+      label: 'path unconfirmed', cls: 'low',
+      detail: 'OverMesh could not confirm which received packet (path, signal) belongs to this message. The message itself is fine.',
+    };
   }
 
   function _mcChatRouteMeta(msg) {

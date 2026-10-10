@@ -1209,6 +1209,10 @@ _mc_loop_ready = threading.Event()
 # ---------------------------------------------------------------------------
 _mc_debug_flags: set = set()   # radio config_ids with debug logging enabled
 _mc_recent_rx_logs: dict[str, list[dict]] = {}  # radio id -> recent RX_LOG_DATA payloads
+# radio id -> {channel_idx: channel hash (2 hex chars)}. The CHANNEL_MSG_RECV
+# event only carries channel_idx, so this cache is how a decoded message gets an
+# expected channel hash to compare a relayed packet's RX chan_hash against.
+_mc_channel_hashes: dict[str, dict[int, str]] = {}
 _mc_recent_messages: dict[str, list[dict]] = {}  # radio id -> recent inbound mc_message dicts
 _mc_drain_active: set[str] = set()
 _mc_drain_pending: set[str] = set()   # fired MESSAGES_WAITING while drain was active — re-drain on finish
@@ -2064,7 +2068,84 @@ def _rx_copy_from_entry(msg, rx):
     }
 
 
-def _rx_correlation_confidence(msg, rx, late=False):
+# A relayed channel packet's RX log and its decoded message should reach us
+# within a beat of each other. 3.0 s is the same "close enough to be the same
+# reception" bound _enrich_recent_message_from_rx already refuses to cross when
+# it attaches late copies, so we reuse it instead of inventing a second window.
+RX_CONFIDENCE_TIGHT_S = 3.0
+
+
+def _mc_channel_hash_from_secret(secret):
+    """channel_hash = SHA256(channel_secret)[:2] — the protocol's derivation.
+
+    meshcore's reader derives CHANNEL_INFO's channel_hash exactly this way, and
+    the parser compares that value against the first byte of a GRP_TXT payload.
+    """
+    if isinstance(secret, str):
+        try:
+            secret = bytes.fromhex(secret)
+        except ValueError:
+            return ""
+    if not isinstance(secret, (bytes, bytearray)) or not secret:
+        return ""
+    return hashlib.sha256(bytes(secret)).hexdigest()[0:2].lower()
+
+
+def _remember_mc_channel_hashes(config_id, channels):
+    """Cache channel_idx -> channel hash for a radio, from a device channel read.
+
+    A CHANNEL_MSG_RECV event carries only channel_idx, so without this cache the
+    app cannot know which channel hash a decoded message should match.
+    """
+    if not config_id:
+        return
+    cache = _mc_channel_hashes.setdefault(config_id, {})
+    for ch in channels or []:
+        try:
+            idx = int(ch.get("channel_idx"))
+        except (TypeError, ValueError, AttributeError):
+            continue
+        value = str(ch.get("channel_hash") or "").lower()
+        if len(value) != 2:
+            value = _mc_channel_hash_from_secret(ch.get("channel_secret"))
+        if value:
+            cache[idx] = value
+
+
+def _mc_channel_hash_for(config_id, channel_idx):
+    if config_id is None or channel_idx is None:
+        return ""
+    try:
+        idx = int(channel_idx)
+    except (TypeError, ValueError):
+        return ""
+    return _mc_channel_hashes.get(config_id, {}).get(idx, "")
+
+
+def _rx_channel_hash_matches(msg, rx):
+    """Does the RX packet's channel hash match the channel the message decoded on?
+
+    The first byte of a GRP_TXT payload is the channel hash; the parser stores it
+    as rx["chan_hash"]. A missing hash on either side is NOT a match.
+    """
+    rx_hash = str(rx.get("chan_hash") or "").lower()
+    msg_hash = str(msg.get("channel_hash") or "").lower()
+    return bool(rx_hash) and bool(msg_hash) and rx_hash == msg_hash
+
+
+def _rx_in_tight_window(rx, now_ts, window_s=RX_CONFIDENCE_TIGHT_S):
+    """Was the RX log stored within window_s before the message was decoded?"""
+    if now_ts is None:
+        return False
+    try:
+        stored = float(rx.get("stored_at"))
+    except (TypeError, ValueError):
+        return False
+    age = float(now_ts) - stored
+    return 0.0 <= age <= float(window_s)
+
+
+def _rx_correlation_confidence(msg, rx, late=False, now_ts=None):
     msg = msg or {}
     rx = rx or {}
     subtype = msg.get("subtype") or ""
@@ -2080,6 +2161,20 @@ def _rx_correlation_confidence(msg, rx, late=False):
             rx_path_len = None
         if rx_path_len == 0:
             return "medium"
+        # Relayed channel packets arrive encrypted: the RX record carries none of
+        # sender/timestamp/text, so the only identity evidence available is the
+        # channel hash (first byte of the GRP_TXT payload) plus the timing window.
+        hash_match = _rx_channel_hash_matches(msg, rx)
+        tight = _rx_in_tight_window(rx, now_ts)
+        if hash_match and tight:
+            confidence = "high"
+        elif hash_match or tight:
+            confidence = "medium"
+        else:
+            confidence = "low"
+        if late and confidence == "high":
+            confidence = "medium"  # attached after delivery: never fully "confirmed"
+        return confidence
     score = 0
     reasons = []
     rx_sender = _rx_sender_prefix(rx)
@@ -2171,13 +2266,11 @@ def _apply_rx_copies_to_message(msg, copies):
     msg["path_hash_size"] = primary.get("path_hash_size")
     msg["rx_rssi"] = primary.get("rx_rssi")
     msg["rx_snr"] = primary.get("rx_snr")
-    confidences = [c.get("confidence") for c in copies if c.get("confidence")]
-    if "low" in confidences:
-        msg["rx_confidence"] = "low"
-    elif "medium" in confidences:
-        msg["rx_confidence"] = "medium"
-    elif "high" in confidences:
-        msg["rx_confidence"] = "high"
+    # The badge must describe the copy whose PATH is shown above, not the worst
+    # (or best) of every copy. _best_rx_copy() above is exactly that copy.
+    primary_confidence = primary.get("confidence")
+    if primary_confidence:
+        msg["rx_confidence"] = primary_confidence
     return msg
 
 
@@ -2220,7 +2313,13 @@ def _enrich_recent_message_from_rx(config_id, rx, name):
     copy = _rx_copy_from_entry(msg, rx)
     if not copy:
         return
-    copy["confidence"] = _rx_correlation_confidence(msg, rx, late=True)
+    chan_idx = msg.get("channel_idx")
+    if chan_idx is None:
+        chan_idx = msg.get("channel")  # stored sse_msg uses "channel" for the idx
+    chan_hash = _mc_channel_hash_for(config_id, chan_idx)
+    copy["confidence"] = _rx_correlation_confidence(
+        {**msg, "channel_hash": chan_hash}, rx, late=True, now_ts=now_ts
+    )
     old_key = (
         msg.get("path"), msg.get("path_len"), msg.get("path_hash_size"),
         msg.get("rx_rssi"), msg.get("rx_snr"), msg.get("rx_confidence"), len(msg.get("rx_copies") or []),
@@ -3117,16 +3216,20 @@ def _subscribe_mc_events(mc, config_id, name):
         try:
             msg = event.payload
             now = int(time.time())
+            now_ts = time.time()
             touched = _touch_contact_seen(msg.get("pubkey_pre"), now)
             if touched and touched.get("public_key"):
                 _mc_archive_merge_contacts(config_id, {touched["public_key"]: dict(touched)})
             rx = _best_recent_rx_for_message(
-                config_id, "channel", time.time(), sender_prefix=msg.get("pubkey_pre"), msg=msg
+                config_id, "channel", now_ts, sender_prefix=msg.get("pubkey_pre"), msg=msg
             )
             path_fields = _mc_message_path_fields(msg, rx)
             rx_copies = _dedup_rx_copies([_rx_copy_from_entry(msg, rx)] if rx else [])
+            chan_hash = _mc_channel_hash_for(config_id, msg.get("channel_idx"))
             for dup in rx_copies:
-                dup["confidence"] = _rx_correlation_confidence({**msg, "subtype": "channel"}, rx)
+                dup["confidence"] = _rx_correlation_confidence(
+                    {**msg, "subtype": "channel", "channel_hash": chan_hash}, rx, now_ts=now_ts
+                )
             sse_msg = {
                 "type":       "mc_message",
                 "radio_id":   config_id,
@@ -4463,6 +4566,9 @@ async def _get_channels_async(config_id, count):
             continue  # transient timeout — skip this slot, try next
         except Exception:
             break  # connection error — abort
+    # Remember idx -> channel hash so a decoded channel message can be matched
+    # against a relayed RX packet's channel hash (see _rx_channel_hash_matches).
+    _remember_mc_channel_hashes(config_id, channels)
     return channels
 
 
