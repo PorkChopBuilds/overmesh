@@ -115,6 +115,7 @@ class BridgeAuthGateTests(unittest.TestCase):
     def test_unauthenticated_api_gets_are_all_blocked(self):
         self._auth_on()
         failures = []
+        checked = 0
         for rule in app_module.app.url_map.iter_rules():
             path = rule.rule
             if not path.startswith("/api/") or app_module._auth_exempt(path):
@@ -122,9 +123,11 @@ class BridgeAuthGateTests(unittest.TestCase):
             if "GET" not in (rule.methods or set()):
                 continue
             url = re.sub(r"<[^>]+>", "1", path)
+            checked += 1
             status = self.client.get(url).status_code
             if status != 401:
                 failures.append((path, status))
+        self.assertGreater(checked, 0, "the walk must actually exercise routes")
         self.assertEqual(failures, [], "routes reachable without a session")
 
 
