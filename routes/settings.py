@@ -1470,26 +1470,6 @@ def api_settings_auth_set():
     return jsonify({"ok": True})
 
 
-@bp.route("/api/system/restart", methods=["POST"])
-def api_system_restart():
-    import threading, os
-    def _do():
-        import time; time.sleep(1)
-        os.system("XDG_RUNTIME_DIR=/run/user/1000 systemctl --user restart overmesh.service")
-    threading.Thread(target=_do, daemon=True).start()
-    return jsonify({"ok": True, "message": "Restarting…"})
-
-
-@bp.route("/api/system/shutdown", methods=["POST"])
-def api_system_shutdown():
-    import threading, os
-    def _do():
-        import time; time.sleep(1)
-        os.system("XDG_RUNTIME_DIR=/run/user/1000 systemctl --user stop overmesh.service")
-    threading.Thread(target=_do, daemon=True).start()
-    return jsonify({"ok": True, "message": "Shutting down…"})
-
-
 @bp.route("/api/settings/mt_node_cleanup/<radio_id>")
 def api_settings_mt_node_cleanup_get(radio_id):
     """MT node-DB hygiene prefs (app-side): auto stale purge per radio."""

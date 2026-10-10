@@ -225,24 +225,6 @@ def api_radio_config_get(radio_id):
         return jsonify({"error": str(e)}), 500
 
 
-@bp.route("/api/radio/<radio_id>/announce", methods=["POST"])
-def api_radio_announce(radio_id):
-    """Re-broadcast NodeInfo (publicKey, name) to the mesh."""
-    iface = get_iface_by_radio(radio_id)
-    if not iface:
-        return jsonify({"error": "Radio not connected"}), 503
-    try:
-        local_num = getattr(iface.myInfo, "my_node_num", None)
-        node_hex = mt_node_id_from_num(local_num)
-        u = (iface.nodes or {}).get(node_hex, {}).get("user", {}) if node_hex else {}
-        long_name  = u.get("longName",  "")
-        short_name = u.get("shortName", "")
-        iface.localNode.setOwner(long_name=long_name, short_name=short_name)
-        return jsonify({"ok": True, "long_name": long_name, "short_name": short_name})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
 @bp.route("/api/radio/<radio_id>/owner", methods=["POST"])
 def api_radio_owner_set(radio_id):
     iface = get_iface_by_radio(radio_id)
