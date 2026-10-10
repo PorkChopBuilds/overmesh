@@ -42,10 +42,24 @@ app.secret_key = load_secret_key(DATA_DIR)
 # Authentication gate (optional, off by default)
 # ---------------------------------------------------------------------------
 
+# Paths that must work without a session. /login and /logout are the login
+# surface; /static is the app shell. /api/bridge/send authenticates itself with
+# its own bearer/X-OverMesh-Token check (bridge._authorized) and is called by
+# Home Assistant, which holds no session — gating it behind the session gate made
+# the documented bridge return 401 the moment a login was enabled (EST-82 B2).
+_AUTH_EXEMPT_PATHS = ("/login", "/logout", "/api/bridge/send")
+
+
+def _auth_exempt(path):
+    """True when `path` bypasses the session gate (it authenticates itself or is
+    part of the login surface). Everything else requires a session."""
+    return path in _AUTH_EXEMPT_PATHS or path.startswith("/static")
+
+
 @app.before_request
 def _auth_gate():
     path = request.path
-    if path == "/login" or path == "/logout" or path.startswith("/static"):
+    if _auth_exempt(path):
         return
     if not is_auth_enabled():
         return
