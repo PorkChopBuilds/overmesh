@@ -12055,7 +12055,7 @@ if (targetEl) {
       const btn = document.getElementById(isProbe ? 'mc-probe-btn' : 'mc-scan-btn');
       const otherBtn = document.getElementById(isProbe ? 'mc-scan-btn' : 'mc-probe-btn');
       const st  = document.getElementById('mc-scan-status');
-      if (btn) { btn.textContent = 'Scanning…'; btn.disabled = true; }
+      if (btn) { btn.textContent = isProbe ? 'Probing…' : 'Scanning…'; btn.disabled = true; }
       if (otherBtn) otherBtn.disabled = true;
       if (st)  { st.style.display = ''; st.textContent = `${_mcScanRemaining}s`; }
       // Log scan start in MC activity
@@ -17824,7 +17824,7 @@ if (targetEl) {
     const label   = isProbe ? 'Probe' : 'Scan';
     // Immediate feedback — SSE mc_scan_started will take over with countdown
     const btn = document.getElementById(isProbe ? 'mc-probe-btn' : 'mc-scan-btn');
-    if (btn) { btn.textContent = '…'; btn.disabled = true; }
+    if (btn) { btn.textContent = isProbe ? 'Probing…' : 'Scanning…'; btn.disabled = true; }
     try {
       const r = await fetch(BASE_PATH + `/api/mc/${encodeURIComponent(radioId)}/scan`, {
         method: 'POST',

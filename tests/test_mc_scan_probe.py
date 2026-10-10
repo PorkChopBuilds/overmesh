@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sys
 import tempfile
 import unittest
@@ -78,6 +79,40 @@ class McScanProbeModeTests(unittest.TestCase):
         self.assertEqual(r.status_code, 409)
         self.assertEqual(self.adverts, [])
         self.assertEqual(self.discovers, [])
+
+
+class McScanProbeButtonLabelTests(unittest.TestCase):
+    """EST-83 Q1: the Probe button must read "Probing…", not "Scanning…".
+
+    Both modes share the mc_scan_started handler, which used to hard-code
+    "Scanning…" for the button it happened to be updating. This is client-side
+    only (the label is set in app.js), so the guard reads the source: the
+    isProbe branch must choose the per-mode label, and startMcScan's immediate
+    feedback must do the same instead of a bare '…'.
+    """
+
+    def setUp(self):
+        self.src = Path(REPO, "static/js/app.js").read_text(encoding="utf-8")
+
+    def test_scan_started_labels_probe_and_scan_distinctly(self):
+        m = re.search(
+            r"const isProbe = data\.advert === false;[\s\S]{0,500}?btn\.textContent = ([^;]+);",
+            self.src,
+        )
+        self.assertIsNotNone(m, "mc_scan_started must keep its `const isProbe = data.advert === false;` guard")
+        expr = m.group(1)
+        self.assertIn("Probing", expr, "the probing button must say Probing…")
+        self.assertIn("Scanning", expr, "the scanning button must still say Scanning…")
+
+    def test_immediate_feedback_uses_per_mode_label(self):
+        m = re.search(
+            r"const isProbe = advert === false;[\s\S]{0,320}?btn\.textContent = ([^;]+);",
+            self.src,
+        )
+        self.assertIsNotNone(m, "startMcScan must keep its `const isProbe = advert === false;` guard")
+        expr = m.group(1)
+        self.assertIn("Probing", expr, "the immediate Probe feedback must say Probing…")
+        self.assertIn("Scanning", expr, "the immediate Scan feedback must say Scanning…")
 
 
 if __name__ == "__main__":
