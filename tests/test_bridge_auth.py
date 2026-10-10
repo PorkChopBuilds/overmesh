@@ -130,6 +130,29 @@ class BridgeAuthGateTests(unittest.TestCase):
         self.assertGreater(checked, 0, "the walk must actually exercise routes")
         self.assertEqual(failures, [], "routes reachable without a session")
 
+    def test_every_non_exempt_route_is_blocked_for_every_method(self):
+        """EST-85 sweep: the walk above only tried GET. Exercise every method the
+        url_map advertises so a future POST/PATCH route can't slip past the gate."""
+        self._auth_on()
+        failures = []
+        checked = 0
+        for rule in app_module.app.url_map.iter_rules():
+            path = rule.rule
+            if app_module._auth_exempt(path):
+                continue
+            url = re.sub(r"<[^>]+>", "1", path)
+            for method in sorted((rule.methods or set()) - {"OPTIONS", "HEAD"}):
+                checked += 1
+                resp = self.client.open(url, method=method)
+                if method == "GET" and not path.startswith("/api/") and not path.startswith("/sse"):
+                    ok = resp.status_code in (301, 302) and "/login" in (resp.headers.get("Location") or "")
+                else:
+                    ok = resp.status_code == 401
+                if not ok:
+                    failures.append((method, path, resp.status_code))
+        self.assertGreater(checked, 100, "the walk must actually exercise routes")
+        self.assertEqual(failures, [], "routes reachable without a session")
+
 
 if __name__ == "__main__":
     unittest.main()
