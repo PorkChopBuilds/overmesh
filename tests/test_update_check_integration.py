@@ -41,8 +41,12 @@ class UpdateCheckIntegrationTests(unittest.TestCase):
         _git(self.repo, "add", "-A")
         _git(self.repo, "commit", "-q", "-m", "local")
         self.local = _git(self.repo, "rev-parse", "--short", "HEAD")
+        self.local_version = "2026.09.11.5"
 
-        # A commit that exists only as "upstream"
+        # A commit that exists only as "upstream" — and it bumps VERSION, so the
+        # banner can show a real "OverMesh X is available (you have Y)" (EST-83 Q3).
+        self.remote_version = "2026.09.12.0"
+        Path(self.repo, "VERSION").write_text(self.remote_version + "\n", encoding="utf-8")
         Path(self.repo, "newer.txt").write_text("newer\n", encoding="utf-8")
         _git(self.repo, "add", "-A")
         _git(self.repo, "commit", "-q", "-m", "upstream work")
@@ -57,7 +61,8 @@ class UpdateCheckIntegrationTests(unittest.TestCase):
         p2 = mock.patch.object(settings, "BASE_DIR", self.repo)
         p2.start(); self.addCleanup(p2.stop)
         settings._UPDATE_CHECK_STATE.update({"checked_at": None, "available": False, "remote_commit": None,
-                                             "local_commit": None, "behind": 0, "version": None, "error": None})
+                                             "local_commit": None, "behind": 0, "version": None,
+                                             "remote_version": None, "local_version": None, "error": None})
         settings._UPDATE_STATE.update({"running": False})
 
     def test_behind_repo_reports_update_available(self):
@@ -66,9 +71,14 @@ class UpdateCheckIntegrationTests(unittest.TestCase):
         self.assertEqual(state["behind"], 1)
         self.assertEqual(state["local_commit"], self.local)
         self.assertEqual(state["remote_commit"], self.remote)
+        # The versions come off the refs with `git show <ref>:VERSION`.
+        self.assertEqual(state["remote_version"], self.remote_version)
+        self.assertEqual(state["local_version"], self.local_version)
         self.assertEqual(len(self.pushes), 1)
         self.assertEqual(self.pushes[0], {"type": "update_available",
-                                          "remote_commit": self.remote, "behind": 1})
+                                          "remote_commit": self.remote,
+                                          "remote_version": self.remote_version,
+                                          "local_version": self.local_version, "behind": 1})
 
     def test_in_sync_repo_reports_nothing(self):
         _git(self.repo, "update-ref", "refs/remotes/origin/main", self.local)

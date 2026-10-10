@@ -4,48 +4,87 @@ const REPO = path.join(__dirname, '..');
 
 const src = fs.readFileSync(path.join(REPO, 'static/js/app.js'), 'utf8');
 const appPy = fs.readFileSync(path.join(REPO, 'app.py'), 'utf8');
+const indexHtml = fs.readFileSync(path.join(REPO, 'templates/index.html'), 'utf8');
+const liteHtml = fs.readFileSync(path.join(REPO, 'templates/lite.html'), 'utf8');
+const liteJs = fs.readFileSync(path.join(REPO, 'static/js/lite.js'), 'utf8');
+const css = fs.readFileSync(path.join(REPO, 'static/css/app.css'), 'utf8');
 
 function assert(cond, msg) {
   if (!cond) { console.error('FAIL: ' + msg); process.exit(1); }
 }
 
-// Server: check at boot + periodically, and a cached endpoint (never fetches).
+// ── Server: boot + 6h check + cached endpoint, now with the version fields ─────
 assert(/from routes.settings import update_check_loop/.test(appPy),
        'app.py must start the update check loop');
 assert(/threading\.Thread\(target=update_check_loop, daemon=True\)\.start\(\)/.test(appPy),
        'the update check loop must run in a daemon thread');
-assert(/if _UPDATE_STATE\.get\("running"\):\s*\n\s*return _UPDATE_CHECK_STATE/.test(src) ||
-       true, 'placeholder');
+const settingsPy = fs.readFileSync(path.join(REPO, 'routes/settings.py'), 'utf8');
+assert(/def _version_at\(ref\)/.test(settingsPy), 'settings.py must read VERSION off a git ref');
+assert(/info\["remote_version"\] = _version_at\(upstream\)/.test(settingsPy),
+       'the check must fill remote_version from origin/main');
+assert(/"remote_version": info\.get\("remote_version"\)/.test(settingsPy),
+       'the SSE/state must carry remote_version');
+assert(/"local_version": info\.get\("local_version"\)/.test(settingsPy),
+       'the SSE/state must carry local_version');
+assert(/def update_check_loop\(\)/.test(settingsPy), 'the 6h loop must still exist');
 
-// Client: fetch the cached state at boot, react to the SSE flip, open Settings → App.
+// ── Client: boot fetch + SSE flip, both pass the versions ─────────────────────
 assert(/checkUpdateNotice\(\);/.test(src), 'the notice must be checked at boot');
 assert(/function checkUpdateNotice\(\)/.test(src), 'checkUpdateNotice() must exist');
 assert(/\/api\/settings\/update\/available/.test(src), 'the client must read the cached endpoint');
 assert(/if \(data\.type === 'update_available'\)/.test(src),
        'the SSE update_available event must be handled');
-assert(/function showUpdateNotice\(/.test(src), 'showUpdateNotice() must exist');
-assert(/switchTab\('settings'\);\s*switchSettingsTab\('app'\);/.test(src),
-       'clicking the notice must open Settings → App');
-assert(/settings-update-summary/.test(src), 'the notice must scroll to the update block');
-assert(/\{persistent: true\}/.test(src), 'the update notice must not auto-dismiss like chat toasts');
-assert(/omUpdateNoticeDismissed/.test(src), 'dismissal must be remembered (per commit)');
-assert(/localStorage\.setItem\('omUpdateNoticeDismissed', remoteCommit\)/.test(src),
+assert(/showUpdateNotice\(data\.remote_commit, data\.behind, data\.remote_version, data\.local_version\)/.test(src),
+       'the SSE flip must pass the versions into the banner');
+assert(/showUpdateNotice\(d\.remote_commit, d\.behind, d\.remote_version, d\.local_version\)/.test(src),
+       'the boot check must pass the versions into the banner');
+
+// ── The yellow top banner (replaces the corner toast) ─────────────────────────
+assert(/function showUpdateNotice\(remoteCommit, behind, remoteVersion, localVersion\)/.test(src),
+       'showUpdateNotice() must take the versions');
+assert(/function _updateBannerText\(/.test(src), 'the banner text must be built by _updateBannerText()');
+assert(/OverMesh \$\{available\} is available \(you have \$\{youHave\}\)/.test(src),
+       'the banner text must read "OverMesh <v> is available (you have <local>)"');
+assert(/const useCommit = !remoteVersion \|\| !localVersion \|\| remoteVersion === localVersion;/.test(src),
+       'equal/missing versions must fall back to the short commit');
+assert(/document\.getElementById\('update-banner'\)/.test(src), 'the client must drive #update-banner');
+assert(/document\.body\.classList\.add\('update-active'\)/.test(src),
+       'showing the banner must add the body class that makes room for it');
+assert(/localStorage\.setItem\('omUpdateNoticeDismissed', commit\)/.test(src) &&
+       /_hideUpdateBanner\(remoteCommit\)/.test(src),
        'dismissal must be stored against the remote commit so the next release still shows');
+assert(/openUpdatePanel\(\)/.test(src), 'the button must open the existing update panel');
+assert(/function openUpdatePanel\(\)[\s\S]*?switchTab\('settings'\); switchSettingsTab\('app'\);/.test(src),
+       'Open updates must go to Settings → App');
+assert(/Open updates/.test(indexHtml), 'the banner must label its button "Open updates"');
 
-// The notice must be LOUD and STICKY: loud variant + CTA chip, and persistent
-// (no timeout) so only the X removes it.
-const css = fs.readFileSync(path.join(REPO, 'static/css/app.css'), 'utf8');
-assert(/\.toast\.toast-update\s*\{/.test(css), 'a dedicated loud .toast-update style must exist in app.css');
-assert(/@keyframes update-glow/.test(css), 'the one-off attention glow must be defined');
-assert(/'update', 'update-available', \{persistent: true\}/.test(src),
-       'the notice must use the loud variant and be persistent');
-assert(/toast-update-cta/.test(src), 'the notice must carry a visible CTA chip');
-assert(!/stack\.innerHTML/.test(src), 'nothing may wipe the toast stack — the notice must survive');
-assert(/localStorage\.setItem\('omUpdateNoticeDismissed', remoteCommit\)/.test(src),
-       'only the X (per release) dismisses it');
+// Markup + CSS: a top strip, not a toast.
+assert(/<div id="update-banner" hidden>/.test(indexHtml), 'index.html must carry the hidden banner');
+assert(/data-update-text/.test(indexHtml) && /data-update-open/.test(indexHtml) && /data-update-dismiss/.test(indexHtml),
+       'the banner must have text + open + dismiss hooks');
+assert(/#update-banner\s*\{/.test(css), 'app.css must style #update-banner');
+assert(/background: #c9a227/.test(css), 'the banner must be yellow (Mesh-Torry #c9a227)');
+assert(/body\.update-active #update-banner \{ display: flex; \}/.test(css),
+       'the banner must be flex-visible only while update-active');
+assert(/\.update-banner-btn/.test(css), 'the open button must be styled');
+assert(!/\.toast\.toast-update\s*\{/.test(css), 'the old corner toast style must be gone');
+assert(!/@keyframes update-glow/.test(css), 'the old toast glow must be gone');
+// and showUpdateNotice no longer builds a toast
+const showFn = src.match(/function showUpdateNotice\([\s\S]*?\n  \}/);
+assert(showFn, 'showUpdateNotice() body must be found');
+assert(!/showToast\(/.test(showFn[0]), 'the update notice must not use the corner toast any more');
 
-// Wiring order: showToast must be defined before the notice uses it (same IIFE).
-assert(src.indexOf('function showToast(') < src.indexOf('function showUpdateNotice('),
-       'showToast must be defined before showUpdateNotice');
+// ── Settings block shows Installed / Available ────────────────────────────────
+assert(/Installed: <code>\$\{escHtml\(info\.local_version/.test(src),
+       'the Settings block must show "Installed: <local_version> (<commit>)"');
+assert(/Available: <code>\$\{escHtml\(info\.remote_version/.test(src),
+       'the Settings block must show "Available: <remote_version> (<commit>)"');
 
-console.log('ok: update-available notice wiring present');
+// ── OM Lite shows the same banner ─────────────────────────────────────────────
+assert(/<div id="update-banner" hidden>/.test(liteHtml), 'lite.html must carry the banner too');
+assert(/function checkLiteUpdateNotice\(\)/.test(liteJs), 'Lite must check the cached endpoint');
+assert(/showLiteUpdateNotice\(d\.remote_commit, d\.remote_version, d\.local_version\)/.test(liteJs),
+       'Lite must react to update_available over SSE');
+assert(/#update-banner\s*\{/.test(liteHtml), 'Lite must style the banner');
+
+console.log('ok: update-available banner wiring present');

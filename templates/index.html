@@ -16,6 +16,13 @@
   <button onclick="dismissExposedBanner(this)" style="margin-left:12px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.35);color:#fecaca;padding:1px 10px;border-radius:4px;cursor:pointer;font-size:11px" title="Hide this warning until the instance is no longer exposed (stays hidden across restarts)">✕ Don't show again</button>
 </div>
 
+<!-- Update-available banner (yellow, top of page) — hidden until checkUpdateNotice()/the SSE event fills it -->
+<div id="update-banner" hidden>
+  <span data-update-text>OverMesh update available</span>
+  <button type="button" class="update-banner-btn" data-update-open>Open updates</button>
+  <button type="button" class="update-banner-dismiss" data-update-dismiss title="Dismiss" aria-label="Dismiss update notice">×</button>
+</div>
+
 <div id="toast-stack"></div>
 
 <!-- Confirm modal -->

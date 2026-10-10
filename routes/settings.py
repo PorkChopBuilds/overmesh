@@ -47,6 +47,8 @@ _UPDATE_CHECK_STATE = {
     "local_commit": None,
     "behind": 0,
     "version": None,
+    "remote_version": None,
+    "local_version": None,
     "error": None,
 }
 
@@ -223,6 +225,17 @@ def _app_version():
         return "0.0.0"
 
 
+def _version_at(ref):
+    """Read VERSION as it exists on a git ref (e.g. origin/main). None on failure.
+
+    The banner wants the human version of the upstream release, not just the
+    commit hash; the file lives in the repo so a post-fetch `git show` answers it
+    without any extra network call (EST-83 Q3).
+    """
+    rc, out, _ = _git_cmd(["show", f"{ref}:VERSION"], timeout=10)
+    return out.strip() if rc == 0 and out.strip() else None
+
+
 def _update_append(line):
     with _UPDATE_LOCK:
         _UPDATE_STATE["log"].append(line)
@@ -241,6 +254,7 @@ def _git_info(fetch=False):
     _, remote, _ = _git_cmd(["config", "--get", "remote.origin.url"], timeout=10)
     info.update({
         "version": _app_version(),
+        "local_version": _app_version(),
         "branch": branch or "unknown",
         "commit": commit or "unknown",
         "full_commit": full_commit or "",
@@ -276,6 +290,10 @@ def _git_info(fetch=False):
 
     upstream = "origin/main"
     rc, remote_commit, _ = _git_cmd(["rev-parse", "--short", upstream], timeout=10)
+    # The upstream release's VERSION, read from the fetched ref (EST-83 Q3).
+    # None when there is no ref / no VERSION file — the banner falls back to the
+    # commit then.
+    info["remote_version"] = _version_at(upstream) if rc == 0 and remote_commit else None
     if rc == 0 and remote_commit:
         info["remote_commit"] = remote_commit
         rc, counts, _ = _git_cmd(["rev-list", "--left-right", "--count", f"HEAD...{upstream}"], timeout=10)
@@ -320,6 +338,8 @@ def check_for_update():
             "local_commit": info.get("commit"),
             "behind": int(info.get("behind") or 0),
             "version": info.get("version"),
+            "remote_version": info.get("remote_version"),
+            "local_version": info.get("local_version"),
             "error": None if info.get("fetch_ok", True) else info.get("fetch_error"),
         })
         state = dict(_UPDATE_CHECK_STATE)
@@ -340,6 +360,8 @@ def check_for_update():
             push_to_sse(json.dumps({
                 "type": "update_available",
                 "remote_commit": state["remote_commit"],
+                "remote_version": state.get("remote_version"),
+                "local_version": state.get("local_version"),
                 "behind": state["behind"],
             }))
         except Exception as e:
@@ -470,6 +492,8 @@ def _run_update_job():
             "behind": 0,
             "remote_commit": final.get("remote_commit"),
             "local_commit": final.get("commit"),
+            "remote_version": final.get("remote_version"),
+            "local_version": final.get("local_version"),
             "error": None,
         })
         _update_append("Update complete. Restart required.")

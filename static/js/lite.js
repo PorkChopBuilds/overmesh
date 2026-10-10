@@ -158,6 +158,50 @@ if (document.body.classList.contains('exposed-active')) {
   window.setTimeout(_fitExposedBannerLite, 250);
 }
 
+// ── Update-available strip (EST-83 Q3) ────────────────────────────────────────
+// Same contract as the main UI: a yellow strip across the top, opened from the
+// Settings → App update block, dismissal remembered per remote commit. OM Lite
+// has a suitable fixed-header top area, so it shows the same banner.
+function _liteUpdateText(remoteCommit, remoteVersion, localVersion) {
+  const useCommit = !remoteVersion || !localVersion || remoteVersion === localVersion;
+  const available = esc(useCommit ? remoteCommit : remoteVersion);
+  const youHave = esc(localVersion || 'an older build');
+  return `OverMesh ${available} is available (you have ${youHave})`;
+}
+
+function showLiteUpdateNotice(remoteCommit, remoteVersion, localVersion) {
+  if (!remoteCommit) return;
+  try { if (localStorage.getItem('omUpdateNoticeDismissed') === remoteCommit) return; } catch(_) {}
+  const banner = document.getElementById('update-banner');
+  if (!banner) return;
+  const textEl = banner.querySelector('[data-update-text]');
+  if (textEl) textEl.textContent = _liteUpdateText(remoteCommit, remoteVersion, localVersion);
+  banner.hidden = false;
+  document.body.classList.add('update-active');
+  const openBtn = banner.querySelector('[data-update-open]');
+  if (openBtn) openBtn.onclick = () => {
+    try { closeAllSheets(); } catch(_) {}
+    switchTab('settings');
+    const el = document.getElementById('update-summary');
+    if (el && el.scrollIntoView) el.scrollIntoView({behavior: 'smooth', block: 'center'});
+  };
+  const dismiss = banner.querySelector('[data-update-dismiss]');
+  if (dismiss) dismiss.onclick = () => {
+    try { localStorage.setItem('omUpdateNoticeDismissed', remoteCommit); } catch(_) {}
+    banner.hidden = true;
+    document.body.classList.remove('update-active');
+  };
+}
+
+async function checkLiteUpdateNotice() {
+  try {
+    const r = await fetch('/api/settings/update/available');
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d && d.available) showLiteUpdateNotice(d.remote_commit, d.remote_version, d.local_version);
+  } catch(_) { /* offline / older server — the SSE push covers it later */ }
+}
+
 function initMap() {
   const panel = document.getElementById('tab-map');
   map = L.map('map', {
@@ -855,6 +899,9 @@ function handleSSE(d) {
       }
       break;
     case 'sense_done':
+      break;
+    case 'update_available':
+      showLiteUpdateNotice(d.remote_commit, d.remote_version, d.local_version);
       break;
   }
 }
@@ -3356,6 +3403,7 @@ function init() {
   document.getElementById('btn-follow')?.classList.toggle('active', S.followGps);
   loadRadios();
   syncSenseOn();
+  checkLiteUpdateNotice();   // server-side check (boot check + every 6h) → top strip
   setTimeout(() => {
     loadNodes();
     loadChannels();

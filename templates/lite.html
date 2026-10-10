@@ -54,6 +54,33 @@
     /* After JS measures the wrapped banner, shift by its real height. */
     body.exposed-active.exposed-fitted #app-header { top: var(--exposed-h, 30px); }
     body.exposed-active.exposed-fitted .tab-panel { top: calc(var(--header-h) + var(--exposed-h, 30px)); }
+    /* Yellow update strip (EST-83 Q3) — same fixed-strip pattern as the exposed
+       banner: it shifts the header/panels down while visible. */
+    #update-banner {
+      display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 998;
+      align-items: center; justify-content: center; gap: 8px;
+      background: #c9a227; color: #1a1505;
+      padding: 4px 12px; font-size: 11.5px; font-weight: 600;
+      border-bottom: 1px solid #a8861c;
+    }
+    body.update-active #update-banner { display: flex; }
+    body.update-active #app-header { top: 30px; }
+    body.update-active .tab-panel { top: calc(var(--header-h) + 30px); }
+    body.update-active.exposed-active #update-banner { top: 30px; }
+    body.update-active.exposed-active #app-header { top: 60px; }
+    body.update-active.exposed-active .tab-panel { top: calc(var(--header-h) + 60px); }
+    body.update-active.exposed-active.exposed-fitted #update-banner { top: var(--exposed-h, 30px); }
+    body.update-active.exposed-active.exposed-fitted #app-header { top: calc(var(--exposed-h, 30px) + 30px); }
+    body.update-active.exposed-active.exposed-fitted .tab-panel { top: calc(var(--header-h) + var(--exposed-h, 30px) + 30px); }
+    #update-banner .update-banner-btn {
+      background: rgba(26,21,5,0.14); border: 1px solid rgba(26,21,5,0.35);
+      color: #1a1505; padding: 1px 8px; border-radius: 4px; cursor: pointer;
+      font-size: 11px; font-weight: 700; white-space: nowrap;
+    }
+    #update-banner .update-banner-dismiss {
+      background: none; border: none; color: #1a1505; font-size: 15px; line-height: 1;
+      cursor: pointer; padding: 0 3px;
+    }
     #app-header {
       position: fixed; top: 0; left: 0; right: 0; height: var(--header-h);
       background: rgba(22,27,34,0.93); backdrop-filter: blur(8px);
@@ -501,6 +528,12 @@
 <body{% if exposed_no_auth %} class="exposed-active"{% endif %}>
 <div id="exposed-banner" title="This instance is bound to {{ bind_host }} with no login enabled. Anyone who can reach it can send RF and control it. Enable a password or bind to 127.0.0.1 (see README → Security).">⚠ No login enabled. Reachable on your network ({{ bind_host }})
   <button onclick="dismissExposedBanner(this)" style="margin-left:12px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.35);color:#fecaca;padding:1px 10px;border-radius:4px;cursor:pointer;font-size:11px" title="Hide this warning until the instance is no longer exposed (stays hidden across restarts)">✕ Don't show again</button>
+</div>
+<!-- Update-available strip (yellow) — hidden until checkLiteUpdateNotice()/the SSE event fills it -->
+<div id="update-banner" hidden>
+  <span data-update-text>OverMesh update available</span>
+  <button type="button" class="update-banner-btn" data-update-open>Open updates</button>
+  <button type="button" class="update-banner-dismiss" data-update-dismiss title="Dismiss" aria-label="Dismiss update notice">×</button>
 </div>
 <div id="app-topo-bg"></div>
 

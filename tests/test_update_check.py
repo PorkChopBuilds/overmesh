@@ -26,6 +26,7 @@ import routes.settings as settings  # noqa: E402
 def _info(available, behind=1, commit="aaaaaaa", remote="bbbbbbb", fetch_ok=True, err=None):
     return {"update_available": available, "behind": behind, "commit": commit,
             "remote_commit": remote, "version": "2026.09.11.5",
+            "remote_version": "2026.09.20.1", "local_version": "2026.09.11.5",
             "fetch_ok": fetch_ok, "fetch_error": err}
 
 
@@ -48,9 +49,14 @@ class UpdateCheckTests(unittest.TestCase):
         self.assertTrue(state["available"])
         self.assertEqual(state["behind"], 3)
         self.assertEqual(state["remote_commit"], "bbbbbbb")
+        # EST-83 Q3: the banner needs the versions, not just the commit.
+        self.assertEqual(state["remote_version"], "2026.09.20.1")
+        self.assertEqual(state["local_version"], "2026.09.11.5")
         self.assertEqual(len(self.pushes), 1, "must announce the flip")
         self.assertEqual(self.pushes[0]["type"], "update_available")
         self.assertEqual(self.pushes[0]["behind"], 3)
+        self.assertEqual(self.pushes[0]["remote_version"], "2026.09.20.1")
+        self.assertEqual(self.pushes[0]["local_version"], "2026.09.11.5")
         # a second check with the same answer must NOT spam
         with mock.patch.object(settings, "_git_info", return_value=_info(True, behind=3)):
             settings.check_for_update()
@@ -161,6 +167,9 @@ class UpdateCheckTests(unittest.TestCase):
         body = r.get_json()
         self.assertIn("available", body)
         self.assertIn("remote_commit", body)
+        # EST-83 Q3: the banner reads these from the cached endpoint too.
+        self.assertIn("remote_version", body)
+        self.assertIn("local_version", body)
 
     def test_completed_update_clears_availability(self):
         settings._UPDATE_CHECK_STATE.update({"available": True, "behind": 2, "remote_commit": "bbbbbbb"})

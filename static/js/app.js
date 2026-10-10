@@ -94,12 +94,25 @@
 
   // The exposure banner can wrap to multiple lines on narrow screens; the body
   // needs enough top padding to clear its real height (a fixed 32px only fits
-  // one line). Measure after layout and set padding to the banner's height.
+  // one line). Measure after layout and set padding to the banner's height. The
+  // yellow update strip, when up, stacks below whatever red strip is present
+  // (EST-83 Q3), so its height is added too.
   function _fitExposedBanner() {
+    const updateBanner = document.getElementById('update-banner');
     const banner = document.getElementById('exposed-banner');
-    if (!banner || !document.body.classList.contains('exposed-active')) return;
+    if (!banner || !document.body.classList.contains('exposed-active')) {
+      // No exposed strip — the silent/update CSS padding is correct as-is.
+      document.body.style.paddingTop = '';
+      if (updateBanner) updateBanner.style.top = '';
+      return;
+    }
     const h = banner.getBoundingClientRect().height;
-    if (h > 0) document.body.style.paddingTop = (h + 4) + 'px';
+    const silentOffset = document.body.classList.contains('silent-active') ? 30 : 0;
+    const updateVisible = updateBanner && !updateBanner.hidden;
+    if (updateVisible && (h + silentOffset) > 0) updateBanner.style.top = (h + silentOffset) + 'px';
+    const updateH = updateVisible ? updateBanner.getBoundingClientRect().height : 0;
+    const total = h + silentOffset + updateH;
+    if (total > 0) document.body.style.paddingTop = (total + 4) + 'px';
   }
   if (document.body.classList.contains('exposed-active')) {
     // Run after fonts/layout settle — retry briefly in case of late reflow.
@@ -384,12 +397,31 @@
   // ── OverMesh update notice ──────────────────────────────────────────────────
   // The server checks GitHub shortly after boot and every few hours, caching the
   // answer at /api/settings/update/available and pushing the flip over SSE. The
-  // notice is a clickable toast that opens Settings → App (where Update lives).
+  // notice is a YELLOW strip across the top (Mesh-Torry style, EST-83 Q3) with an
+  // "Open updates" button that opens Settings → App (where Update lives) and an X.
   // Dismissal is remembered per remote commit, so silencing one release does not
-  // hide the next one.
+  // hide the next one. Updating is always the user's click.
   function _updateNoticeDismissed(commit) {
     if (!commit) return false;
     try { return localStorage.getItem('omUpdateNoticeDismissed') === commit; } catch(_) { return false; }
+  }
+
+  // "OverMesh <remote_version> is available (you have <local_version>)". When the
+  // versions are equal or the remote version is unknown, the short commit takes
+  // the version's place.
+  function _updateBannerText(remoteCommit, remoteVersion, localVersion) {
+    const useCommit = !remoteVersion || !localVersion || remoteVersion === localVersion;
+    const available = escHtml(useCommit ? remoteCommit : remoteVersion);
+    const youHave = escHtml(localVersion || 'an older build');
+    return `OverMesh ${available} is available (you have ${youHave})`;
+  }
+
+  function _hideUpdateBanner(commit) {
+    if (commit) { try { localStorage.setItem('omUpdateNoticeDismissed', commit); } catch(_) {} }
+    const banner = document.getElementById('update-banner');
+    if (banner) banner.hidden = true;
+    document.body.classList.remove('update-active');
+    try { _fitExposedBanner(); } catch(_) {}   // give the space back
   }
 
   function openUpdatePanel() {
@@ -403,35 +435,23 @@
     Promise.resolve(settingsLoadUpdateStatus(false)).catch(() => {});
   }
 
-  function showUpdateNotice(remoteCommit, behind) {
+  function showUpdateNotice(remoteCommit, behind, remoteVersion, localVersion) {
     if (!remoteCommit) return;
     if (_updateNoticeDismissed(remoteCommit)) return;
-    const stack = document.getElementById('toast-stack');
-    if (!stack) return;
-    if (stack.querySelector('[data-toast-tag="update-available"]')) return;   // already shown
-    const n = parseInt(behind, 10);
-    showToast(
-      '⬆ OverMesh update available',
-      `<b>${escHtml(remoteCommit)}</b>${n > 1 ? ` (${n} commits)` : ''} is ready to install.` +
-      '<br><span class="toast-update-cta">Open Settings → App</span>',
-      'update', 'update-available', {persistent: true}
-    );
-    const toast = stack.querySelector('[data-toast-tag="update-available"]');
-    if (!toast) return;
-    // Persistent (no timeout) and nothing in the app evicts toasts from the stack,
-    // so this stays put — on this page load and every reload — until the X is
-    // clicked, which is the only thing that removes it (and it remembers the
-    // release, so the notice returns for the *next* one).
-    toast.style.cursor = 'pointer';
-    toast.title = 'Open Settings → App to update OverMesh';
-    toast.onclick = (ev) => {
-      if (ev.target && ev.target.closest && ev.target.closest('.toast-close')) return;   // × handles itself
-      openUpdatePanel();
-    };
-    const closeBtn = toast.querySelector('.toast-close');
-    if (closeBtn) closeBtn.addEventListener('click', () => {
-      try { localStorage.setItem('omUpdateNoticeDismissed', remoteCommit); } catch(_) {}
-    });
+    const banner = document.getElementById('update-banner');
+    if (!banner) return;
+    const textEl = banner.querySelector('[data-update-text]');
+    if (textEl) textEl.textContent = _updateBannerText(remoteCommit, remoteVersion, localVersion);
+    banner.hidden = false;
+    document.body.classList.add('update-active');
+    banner.title = 'OverMesh update available — open Settings → App to install it';
+    const openBtn = banner.querySelector('[data-update-open]');
+    if (openBtn) openBtn.onclick = () => openUpdatePanel();
+    const dismiss = banner.querySelector('[data-update-dismiss]');
+    if (dismiss) dismiss.onclick = () => _hideUpdateBanner(remoteCommit);
+    // The fixed strip (and the strip it stacks under) takes vertical space —
+    // re-measure so the header is not pushed under it.
+    try { _fitExposedBanner(); } catch(_) {}
   }
 
   async function checkUpdateNotice() {
@@ -439,7 +459,7 @@
       const r = await fetch(BASE_PATH + '/api/settings/update/available');
       if (!r.ok) return;
       const d = await r.json();
-      if (d && d.available) showUpdateNotice(d.remote_commit, d.behind);
+      if (d && d.available) showUpdateNotice(d.remote_commit, d.behind, d.remote_version, d.local_version);
     } catch(e) { /* offline / older server — the SSE push covers it later */ }
   }
 
@@ -1393,7 +1413,7 @@
       let data; try { data = JSON.parse(e.data); } catch(err) { return; }
       if (data.type === 'update_available') {
         // Server checked upstream and found a newer commit — offer it now.
-        showUpdateNotice(data.remote_commit, data.behind);
+        showUpdateNotice(data.remote_commit, data.behind, data.remote_version, data.local_version);
         return;
       }
       if (data.type === 'server_version') {
@@ -10303,9 +10323,10 @@ if (targetEl) {
       return;
     }
     const parts = [
-      `Version <code>${escHtml(info.version || '0.0.0')}</code>`,
-      `Build <code>${escHtml(info.commit || '?')}</code>`,
-      info.remote_commit ? `GitHub <code>${escHtml(info.remote_commit)}</code>` : 'GitHub unknown',
+      `Installed: <code>${escHtml(info.local_version || info.version || '0.0.0')}</code> (<code>${escHtml(info.commit || '?')}</code>)`,
+      info.remote_commit
+        ? `Available: <code>${escHtml(info.remote_version || info.remote_commit)}</code> (<code>${escHtml(info.remote_commit)}</code>)`
+        : 'GitHub unknown',
     ];
     if (info.dirty) {
       parts.push('<span style="color:var(--red)">local changes present</span>');
