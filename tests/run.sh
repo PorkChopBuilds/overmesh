@@ -1,7 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd /home/slofi/overmesh
-python3 -m unittest discover -s tests -p 'test_*.py'
+
+# Run against THIS checkout, wherever it lives: derive the repo root from the
+# script's own location instead of a hard-coded path (that made the runner test
+# /home/slofi/overmesh no matter where it was launched from, and broke on hosts
+# whose checkout is elsewhere, e.g. gandalf's /home/gandalf/overmesh).
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$REPO_ROOT"
+
+# Prefer the repo's own venv (meshtastic and the app deps live there); fall back
+# to system python3 so the runner still works without a venv.
+if [ -x ./venv/bin/python ]; then
+  PY=./venv/bin/python
+else
+  PY=python3
+fi
+"$PY" -m unittest discover -s tests -p 'test_*.py'
 node tests/test_mc_path_template.js
 node tests/test_mc_cleanup_favourites.js
 node tests/test_update_notice.js
