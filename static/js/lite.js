@@ -409,7 +409,7 @@ function toggleSense() {
 function toggleTrace() {
   S.traceOn = !S.traceOn;
   if (!S.traceOn) { S.traceLines.forEach(l => map.removeLayer(l)); S.traceLines = []; }
-  toast(S.traceOn ? 'Msg trace: ON — tap a message to trace it' : 'Msg trace: OFF');
+  toast(S.traceOn ? 'Msg trace: ON. Tap a message to trace it' : 'Msg trace: OFF');
   closeMapMenu();
 }
 
@@ -632,7 +632,7 @@ function _liveRxLaunchDirect(res, color) {
   const when = res.row.ts ? new Date(res.row.ts * 1000).toLocaleTimeString() : '';
   ring.bindTooltip(
     `<b>${esc(res.row.payload_type || 'UNK')}</b> · ${esc(res.row.route_type || '')}<br>`
-    + `heard <b>direct</b> — no relay hops<br>`
+    + `heard <b>direct</b>, no relay hops<br>`
     + `${res.row.rssi != null ? res.row.rssi + ' dBm' : ''} ${res.row.snr != null ? '/ ' + res.row.snr + ' SNR' : ''}<br>`
     + `${esc(when)}`, { sticky: true });
   _liveRxAnims.push({ direct: true, ring, color, duration: MC_LIVE_DIRECT_MS, startedAt: null, done: false });
@@ -1385,7 +1385,7 @@ function showMsgTrace(pathResult, msgIdx, senderName) {
   // Hop/RPTR name list is Sense-mode-only — Map mode just gets the line + chat jump.
   if (S.senseOn) renderTraceHops(pathResult, senderName);
   else hideTraceHops();
-  if (pathResult.partial) toast('Partial path — some hops unresolved', 3000);
+  if (pathResult.partial) toast('Partial path: some hops unresolved', 3000);
 }
 
 // Textual hop list to go with the trace line — sender at one end, HD at the
@@ -1416,7 +1416,7 @@ function renderTraceHops(pathResult, senderName) {
     </div>`;
   }).join('');
   const knownRelays = Math.max(0, points.length - 2);
-  countEl.textContent = pathResult.partial ? `partial — ${knownRelays} known`
+  countEl.textContent = pathResult.partial ? `partial: ${knownRelays} known`
     : (knownRelays > 0 ? `${knownRelays} hop${knownRelays !== 1 ? 's' : ''}` : 'direct');
   panel.hidden = false;
 }
@@ -1708,7 +1708,7 @@ function renderNodesSummary() {
 }
 
 function nodeRow(id, type, name, n, radioId, isFav) {
-  const lastheard = n.last_heard ? relTime(n.last_heard) : '—';
+  const lastheard = n.last_heard ? relTime(n.last_heard) : '-';
   const meta = type === 'mt'
     ? `${lastheard}${n.hops != null ? ' · ' + n.hops + ' hops' : ''}`
     : `${lastheard}${n.snr != null ? ' · SNR ' + n.snr : ''}`;
@@ -1801,7 +1801,7 @@ function nodeAction(action) {
       headers: {'Content-Type':'application/json'}, body: JSON.stringify(traceBody) })
       .then(r => r.json())
       .then(d => {
-        document.getElementById('ns-result').textContent = d.ok ? 'Traceroute sent — waiting for result' : 'Failed';
+        document.getElementById('ns-result').textContent = d.ok ? 'Traceroute sent. Waiting for result' : 'Failed';
         if (d.ok) addActivity('〰', 'Trace sent', id);
       })
       .catch(() => { document.getElementById('ns-result').textContent = 'Error'; });
@@ -2034,7 +2034,7 @@ function _applyMapMode(mode) {
     if (layers) layers.style.right = '';
     if (follow) follow.style.right = '';
     const h4 = panel.querySelector('h4');
-    if (h4) h4.textContent = mode === 'sense' ? 'SENSE — PACKETS' : 'RECENT MESSAGES';
+    if (h4) h4.textContent = mode === 'sense' ? 'SENSE: PACKETS' : 'RECENT MESSAGES';
     renderMapActivity();
     refreshMapLayout();
   }
@@ -2897,7 +2897,7 @@ function renderSettings() {
     <div class="form-group">
       <label class="form-label">Repeater node</label>
       <select id="rptr-node" class="form-select">
-        <option value="">— select —</option>
+        <option value="">select</option>
         ${Object.values(S.mcNodes).flatMap(Object.values)
           .filter(c => c.name?.toLowerCase().includes('rptr') || c.name?.toLowerCase().includes('repeat'))
           .map(c => `<option value="${esc(c.contact_id)}" data-radio="${esc(c.radio_id)}">${esc(c.name||c.contact_id)}</option>`).join('')}
@@ -3047,7 +3047,7 @@ function _updateHdrRadio() {
     name.textContent = allRadios[0].name || allRadios[0].port || allRadios[0].id || 'Offline';
   } else {
     dot.classList.remove('on');
-    name.textContent = '—';
+    name.textContent = '-';
     name.title = '';
   }
 }
@@ -3255,7 +3255,7 @@ function esc(s) {
 }
 
 function relTime(ts) {
-  if (!ts) return '—';
+  if (!ts) return '-';
   const diff = Math.floor(Date.now()/1000 - ts);
   if (diff < 60) return diff + 's ago';
   if (diff < 3600) return Math.floor(diff/60) + 'm ago';
