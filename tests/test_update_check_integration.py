@@ -21,7 +21,8 @@ _DATA_DIR.mkdir(parents=True, exist_ok=True)
 _CONFIG_PATH.write_text(json.dumps({"nodes": [], "mc_nodes": [], "silent_mode": False}), encoding="utf-8")
 os.environ.setdefault("OVERMESH_CONFIG", str(_CONFIG_PATH))
 os.environ.setdefault("OVERMESH_DATA_DIR", str(_DATA_DIR))
-sys.path.insert(0, "/home/slofi/overmesh")
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO)
 
 import routes.settings as settings  # noqa: E402
 

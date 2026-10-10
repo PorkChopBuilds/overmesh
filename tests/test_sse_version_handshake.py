@@ -14,7 +14,8 @@ _CONFIG_PATH.write_text(json.dumps({"nodes": [], "mc_nodes": [], "silent_mode": 
 
 os.environ.setdefault("OVERMESH_CONFIG", str(_CONFIG_PATH))
 os.environ.setdefault("OVERMESH_DATA_DIR", str(_DATA_DIR))
-sys.path.insert(0, "/home/slofi/overmesh")
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO)
 
 import routes.chat as chat_routes  # noqa: E402
 
@@ -30,7 +31,7 @@ class SseVersionHandshakeTests(unittest.TestCase):
         ev = chat_routes._sse_version_event()
         self.assertEqual(ev["type"], "server_version")
         # matches the repo VERSION file, which is also what index() renders into the shell
-        with open("/home/slofi/overmesh/VERSION", encoding="utf-8") as f:
+        with open(os.path.join(REPO, "VERSION"), encoding="utf-8") as f:
             self.assertEqual(ev["version"], f.read().strip())
 
     def test_version_is_never_empty(self):

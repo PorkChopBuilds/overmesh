@@ -1,6 +1,8 @@
 const fs = require('fs');
+const path = require('path');
+const REPO = path.join(__dirname, '..');
 
-const src = fs.readFileSync('/home/slofi/overmesh/static/js/app.js', 'utf8');
+const src = fs.readFileSync(path.join(REPO, 'static/js/app.js'), 'utf8');
 
 function assert(cond, msg) {
   if (!cond) { console.error('FAIL: ' + msg); process.exit(1); }

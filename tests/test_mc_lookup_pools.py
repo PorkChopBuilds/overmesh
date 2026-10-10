@@ -6,11 +6,13 @@ but absent from the merged/archive views was unresolvable (KeyError), which brok
 store-to-radio / scoped delete for exactly the contacts that exist only on the
 radio. Introduced in 2ca3385 (manual contact approval).
 """
+import os
 import sys
 import unittest
 from unittest import mock
 
-sys.path.insert(0, "/home/slofi/overmesh")
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO)
 
 import routes.mc as mc  # noqa: E402
 
@@ -81,7 +83,7 @@ class LookupTests(unittest.TestCase):
 
 class ImportHygieneTests(unittest.TestCase):
     def test_no_unused_auto_add_import(self):
-        src = open("/home/slofi/overmesh/routes/mc.py").read()
+        src = open(os.path.join(REPO, "routes/mc.py")).read()
         self.assertNotIn("apply_mc_auto_add_contacts,", src)
         self.assertIn("get_mc_auto_add_state,", src)
 

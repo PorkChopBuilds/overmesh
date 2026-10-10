@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Run against THIS checkout, wherever it lives: derive the repo root from the
 # script's own location instead of a hard-coded path (that made the runner test
-# /home/slofi/overmesh no matter where it was launched from, and broke on hosts
+# the live install no matter where it was launched from, and broke on hosts
 # whose checkout is elsewhere, e.g. gandalf's /home/gandalf/overmesh).
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"

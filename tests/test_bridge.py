@@ -20,7 +20,8 @@ _CONFIG_PATH.write_text(
 
 os.environ.setdefault("OVERMESH_CONFIG", str(_CONFIG_PATH))
 os.environ.setdefault("OVERMESH_DATA_DIR", str(_DATA_DIR))
-sys.path.insert(0, "/home/slofi/overmesh")
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO)
 
 import bridge  # noqa: E402
 import routes.settings as settings_routes  # noqa: E402

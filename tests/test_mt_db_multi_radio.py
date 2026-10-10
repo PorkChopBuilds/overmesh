@@ -16,7 +16,8 @@ _CONFIG_PATH.write_text(json.dumps({"nodes": [], "mc_nodes": [], "gps": {}, "sil
 
 os.environ.setdefault("OVERMESH_CONFIG", str(_CONFIG_PATH))
 os.environ.setdefault("OVERMESH_DATA_DIR", str(_DATA_DIR))
-sys.path.insert(0, "/home/slofi/overmesh")
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO)
 
 import db  # noqa: E402
 from routes import nodes as nodes_routes  # noqa: E402

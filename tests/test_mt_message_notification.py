@@ -9,7 +9,8 @@ import os
 import sys
 import unittest
 
-sys.path.insert(0, "/home/slofi/overmesh")
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO)
 
 import helpers  # noqa: E402
 
@@ -75,9 +76,9 @@ class WiringTests(unittest.TestCase):
     """The payload field and the client title must exist — that is the actual fix."""
 
     def setUp(self):
-        self.mesh = io.open("/home/slofi/overmesh/mesh.py", encoding="utf-8").read()
-        self.chat = io.open("/home/slofi/overmesh/routes/chat.py", encoding="utf-8").read()
-        self.js = io.open("/home/slofi/overmesh/static/js/app.js", encoding="utf-8").read()
+        self.mesh = io.open(os.path.join(REPO, "mesh.py"), encoding="utf-8").read()
+        self.chat = io.open(os.path.join(REPO, "routes/chat.py"), encoding="utf-8").read()
+        self.js = io.open(os.path.join(REPO, "static/js/app.js"), encoding="utf-8").read()
 
     def test_payload_carries_channel_name(self):
         self.assertIn('"channel_name": mt_channel_name(interface, channel),', self.mesh)

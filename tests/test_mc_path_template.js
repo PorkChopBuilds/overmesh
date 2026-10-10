@@ -1,7 +1,8 @@
 const fs = require('fs');
-const path = '/home/slofi/overmesh/static/js/app.js';
-const src = fs.readFileSync(path, 'utf8');
-const templateSrc = fs.readFileSync('/home/slofi/overmesh/templates/index.html', 'utf8');
+const path = require('path');
+const REPO = path.join(__dirname, '..');
+const src = fs.readFileSync(path.join(REPO, 'static/js/app.js'), 'utf8');
+const templateSrc = fs.readFileSync(path.join(REPO, 'templates/index.html'), 'utf8');
 
 function assert(cond, msg) {
   if (!cond) {

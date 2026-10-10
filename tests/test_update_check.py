@@ -17,7 +17,8 @@ _CONFIG_PATH.write_text(json.dumps({"nodes": [], "mc_nodes": [], "silent_mode": 
 
 os.environ.setdefault("OVERMESH_CONFIG", str(_CONFIG_PATH))
 os.environ.setdefault("OVERMESH_DATA_DIR", str(_DATA_DIR))
-sys.path.insert(0, "/home/slofi/overmesh")
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO)
 
 import routes.settings as settings  # noqa: E402
 
@@ -163,7 +164,7 @@ class UpdateCheckTests(unittest.TestCase):
 
     def test_completed_update_clears_availability(self):
         settings._UPDATE_CHECK_STATE.update({"available": True, "behind": 2, "remote_commit": "bbbbbbb"})
-        src = open("/home/slofi/overmesh/routes/settings.py", encoding="utf-8").read()
+        src = open(os.path.join(REPO, "routes/settings.py"), encoding="utf-8").read()
         # the success path of the update job must drop the notice
         self.assertIn('_UPDATE_CHECK_STATE.update({\n            "checked_at": int(time.time()),\n            "available": False,', src)
 

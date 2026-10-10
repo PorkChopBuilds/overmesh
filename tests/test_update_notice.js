@@ -1,7 +1,9 @@
 const fs = require('fs');
+const path = require('path');
+const REPO = path.join(__dirname, '..');
 
-const src = fs.readFileSync('/home/slofi/overmesh/static/js/app.js', 'utf8');
-const appPy = fs.readFileSync('/home/slofi/overmesh/app.py', 'utf8');
+const src = fs.readFileSync(path.join(REPO, 'static/js/app.js'), 'utf8');
+const appPy = fs.readFileSync(path.join(REPO, 'app.py'), 'utf8');
 
 function assert(cond, msg) {
   if (!cond) { console.error('FAIL: ' + msg); process.exit(1); }
@@ -32,7 +34,7 @@ assert(/localStorage\.setItem\('omUpdateNoticeDismissed', remoteCommit\)/.test(s
 
 // The notice must be LOUD and STICKY: loud variant + CTA chip, and persistent
 // (no timeout) so only the X removes it.
-const css = fs.readFileSync('/home/slofi/overmesh/static/css/app.css', 'utf8');
+const css = fs.readFileSync(path.join(REPO, 'static/css/app.css'), 'utf8');
 assert(/\.toast\.toast-update\s*\{/.test(css), 'a dedicated loud .toast-update style must exist in app.css');
 assert(/@keyframes update-glow/.test(css), 'the one-off attention glow must be defined');
 assert(/'update', 'update-available', \{persistent: true\}/.test(src),
