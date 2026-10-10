@@ -66,6 +66,12 @@ assert(/#update-banner\s*\{/.test(css), 'app.css must style #update-banner');
 assert(/background: #c9a227/.test(css), 'the banner must be yellow (Mesh-Torry #c9a227)');
 assert(/body\.update-active #update-banner \{ display: flex; \}/.test(css),
        'the banner must be flex-visible only while update-active');
+// EST-85 sweep: on a narrow screen the version text must shrink and ellipsize so
+// the "Open updates" button and the dismiss X stay reachable.
+assert(/#update-banner \[data-update-text\][^}]*text-overflow: ellipsis/.test(css),
+       'app.css must ellipsize the banner text on narrow screens');
+assert(/#update-banner \[data-update-text\][^}]*text-overflow: ellipsis/.test(liteHtml),
+       'lite.html must ellipsize the banner text on narrow screens');
 assert(/\.update-banner-btn/.test(css), 'the open button must be styled');
 assert(!/\.toast\.toast-update\s*\{/.test(css), 'the old corner toast style must be gone');
 assert(!/@keyframes update-glow/.test(css), 'the old toast glow must be gone');
@@ -73,6 +79,16 @@ assert(!/@keyframes update-glow/.test(css), 'the old toast glow must be gone');
 const showFn = src.match(/function showUpdateNotice\([\s\S]*?\n  \}/);
 assert(showFn, 'showUpdateNotice() body must be found');
 assert(!/showToast\(/.test(showFn[0]), 'the update notice must not use the corner toast any more');
+// EST-85 sweep: user-visible text carries no em dashes (the banner title was the
+// only one left in the client after the EST-79 pass; comments may keep theirs).
+assert(!/banner\.title\s*=\s*'[^']*\u2014/.test(showFn[0]),
+       'the update banner title must not show an em dash');
+// EST-85 sweep: the silent strip changes the stack order, so the silent toggle
+// must re-run the fit that places the update banner below it.
+const silentFn = src.match(/function _updateSilentUi\([\s\S]*?\n  \}/);
+assert(silentFn, '_updateSilentUi() body must be found');
+assert(/_fitExposedBanner\(\)/.test(silentFn[0]),
+       'toggling Silent must re-measure the banner stack');
 
 // Drive the REAL text builder, not a copy: version line normally, commit on
 // equal/missing versions.

@@ -64,6 +64,11 @@
       border-bottom: 1px solid #a8861c;
     }
     body.update-active #update-banner { display: flex; }
+    /* Narrow screens: shrink/ellipsize the version text so the buttons stay
+       reachable on the fixed strip. */
+    #update-banner [data-update-text] {
+      min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
     body.update-active #app-header { top: 30px; }
     body.update-active .tab-panel { top: calc(var(--header-h) + 30px); }
     body.update-active.exposed-active #update-banner { top: 30px; }

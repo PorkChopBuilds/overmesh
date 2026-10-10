@@ -65,6 +65,9 @@
         ? 'Silent Running active. Click to disable'
         : 'Enable Silent Running: suppresses all radio transmissions';
     }
+    // The silent strip changes the stack order under the update/exposed strips,
+    // so re-measure instead of leaving a stale inline `top` behind (EST-85 sweep).
+    try { _fitExposedBanner(); } catch(_) {}
   }
 
   async function toggleSilentMode() {
@@ -444,7 +447,7 @@
     if (textEl) textEl.textContent = _updateBannerText(remoteCommit, remoteVersion, localVersion);
     banner.hidden = false;
     document.body.classList.add('update-active');
-    banner.title = 'OverMesh update available — open Settings → App to install it';
+    banner.title = 'OverMesh update available: open Settings → App to install it';
     const openBtn = banner.querySelector('[data-update-open]');
     if (openBtn) openBtn.onclick = () => openUpdatePanel();
     const dismiss = banner.querySelector('[data-update-dismiss]');
@@ -20316,7 +20319,7 @@ async function doMcStatusReq(pubkeyPrefix, radioId, name) {
   _alertsBadgeUpdate();
   loadLive();
   showOmIntroIfNeeded();
-  checkUpdateNotice();   // server-side check result (boot check + every 6h), shown as a toast
+  checkUpdateNotice();   // server-side check result (boot check + every 6h), shown as the top banner
   setInterval(loadLive, 15000);
   setInterval(() => { if (currentTab === 'settings') settingsRefresh(); }, 4000);
   // Keep sense card timers ticking
