@@ -3,12 +3,10 @@ import json
 import os
 import queue
 import time
-import threading
 
 from flask import Blueprint, Response, jsonify, request
 
 from config import BASE_DIR, CONFIG
-from cross import maybe_forward_mt_message
 from db import save_message
 from helpers import _next_msg_id, get_node_name, mt_channel_name, mt_node_id_from_num, push_to_sse
 from mesh import get_any_iface, get_any_iface_with_id, get_iface_by_radio
@@ -195,16 +193,6 @@ def api_chat_send():
             with pending_acks_lock:
                 pending_acks[pkt_id] = (msg["id"], radio_id, time.time())
         push_to_sse(json.dumps(msg))
-        if not dest_id:
-            forward_msg = {
-                "from_id": local_node_id,
-                "from_name": my_name,
-                "channel": channel,
-                "text": text,
-                "is_dm": False,
-                "radio_id": radio_id,
-            }
-            threading.Thread(target=maybe_forward_mt_message, args=(forward_msg,), daemon=True).start()
         return jsonify({"ok": True, "message": msg})
     except Exception as e:
         return jsonify({"error": str(e)}), 500

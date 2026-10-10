@@ -17,7 +17,6 @@ import qrcode.image.svg
 from flask import Blueprint, jsonify, request
 
 from config import CONFIG, CONFIG_LOCK, save_config
-from cross import maybe_forward_mc_message
 from helpers import _as_bool, push_to_sse
 from mesh_mc import (MC_PAYLOAD_TYPE_NAMES, MC_ROUTE_TYPE_NAMES,
                      send_chan_msg, send_dm, send_advert, refresh_contacts,
@@ -805,7 +804,6 @@ def api_mc_send_chan(radio_id):
     msg["id"] = _resolve_sent_msg_id(msg, data)
     save_mc_message(msg)
     push_to_sse(msg)  # broadcast to OM's own UI so a send from any client (incl. OPS-TOC) shows live
-    threading.Thread(target=maybe_forward_mc_message, args=(dict(msg),), daemon=True).start()
 
     return jsonify({"ok": True, "queued": True, "tx_event": result_type, "message": msg})
 

@@ -210,7 +210,7 @@ Key values include:
 - `app.accent_color` — accent color hex
 - `sense_passive` — enable passive Sense logging
 - `sense_active_auto` — auto-run active Sense on connect
-- `cross.rules` — cross-system forwarding rules
+- Cross-system forwarding was removed in 2026-10: it was parked and never enabled, so a stored `cross` key is now ignored
 - `bridge` — webhook, ingest, and MQTT bridge settings
 - `gps` — optional GPS receiver config (`enabled`, `port`); not included in the example config, disabled by default
 
@@ -313,7 +313,6 @@ For the background story behind the project, see `ABOUT.md`.
 | `mesh.py` | Meshtastic connect, reconnect, packet handling |
 | `mesh_mc.py` | MeshCore async bridge and event handling |
 | `bot.py` | Bot logic |
-| `cross.py` | Cross-system forwarding logic |
 | `db.py` | SQLite storage |
 | `helpers.py` | SSE push and helper functions |
 | `routes/` | Flask blueprints by feature area |

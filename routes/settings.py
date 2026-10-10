@@ -12,7 +12,6 @@ from flask import Blueprint, jsonify, request
 
 from config import BASE_DIR, CONFIG, CONFIG_LOCK, DATA_DIR, save_config
 from db import get_auth_setting, set_auth_setting
-from cross import _normalize_rule, get_cross_config
 from helpers import _as_bool, push_to_sse
 from mesh import connect_node
 from state import chat_lock, chat_messages, connections, connections_lock, mc_connections, mc_connections_lock
@@ -892,46 +891,6 @@ def api_settings_app_set():
                 CONFIG["app"]["om_manual_lon"] = round(lon, 6)
         save_config()
     return jsonify({"ok": True})
-
-
-@bp.route("/api/settings/cross", methods=["GET"])
-def api_settings_cross_get():
-    return jsonify(get_cross_config())
-
-
-@bp.route("/api/settings/cross", methods=["POST"])
-def api_settings_cross_set():
-    data = request.get_json(silent=True) or {}
-    rules_in = data.get("rules")
-    if rules_in is None:
-        rules_in = [data]
-    if not isinstance(rules_in, list):
-        return jsonify({"error": "rules must be a list"}), 400
-    mt_ids = {n.get("id") for n in CONFIG.get("nodes", [])}
-    mc_ids = {n.get("id") for n in CONFIG.get("mc_nodes", [])}
-    rules = []
-    for raw in rules_in:
-        rule = _normalize_rule(raw)
-        if not rule["source_radio_id"] or not rule["target_radio_id"]:
-            return jsonify({"error": "Each rule must have source and target radios"}), 400
-        if rule["source_radio_id"] == rule["target_radio_id"]:
-            return jsonify({"error": "Source and target radios must be on different systems"}), 400
-        source_net = rule["source_network"]
-        if source_net == "mt":
-            if rule["source_radio_id"] not in mt_ids:
-                return jsonify({"error": f'Source radio {rule["source_radio_id"]} is not an MT radio'}), 400
-            if rule["target_radio_id"] not in mc_ids:
-                return jsonify({"error": f'Target radio {rule["target_radio_id"]} is not an MC radio'}), 400
-        else:
-            if rule["source_radio_id"] not in mc_ids:
-                return jsonify({"error": f'Source radio {rule["source_radio_id"]} is not an MC radio'}), 400
-            if rule["target_radio_id"] not in mt_ids:
-                return jsonify({"error": f'Target radio {rule["target_radio_id"]} is not an MT radio'}), 400
-        rules.append(rule)
-    with CONFIG_LOCK:
-        CONFIG["cross"] = {"rules": rules}
-        save_config()
-    return jsonify({"ok": True, "cross": {"rules": rules}})
 
 
 # ---------------------------------------------------------------------------

@@ -32,7 +32,6 @@ from meshcore.serial_cx import SerialConnection
 from meshcore.tcp_cx import TCPConnection
 
 from config import CONFIG, CONFIG_LOCK, DATA_DIR
-from cross import maybe_forward_mc_message
 from bridge import publish_inbound_message
 from db import log_position, save_mc_message, update_mc_message_rx, save_passive_obs, save_passive_obs_bulk, mc_msgs_db_path, register_mc_msgs_db, init_mc_msgs_db, mc_passive_db_path, register_mc_passive_db
 from helpers import push_to_sse
@@ -3156,10 +3155,6 @@ def _subscribe_mc_events(mc, config_id, name):
             push_to_sse(sse_msg)
             publish_inbound_message(sse_msg)
             log.info(f"[MC:{name}] Channel msg from {msg.get('pubkey_pre','?')}: {msg.get('text','')[:60]}")
-            threading.Thread(
-                target=maybe_forward_mc_message, args=(dict(sse_msg),),
-                daemon=True,
-            ).start()
             # Bot command handling (background thread to avoid blocking asyncio loop)
             bot_msg = dict(msg)
             bot_msg.update({

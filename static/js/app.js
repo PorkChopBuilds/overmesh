@@ -1784,7 +1784,7 @@
       body: [
         'OverMesh is a local dashboard for Meshtastic (MT) and MeshCore (MC) radios. It runs in your browser and talks to radios connected to this machine via USB serial, TCP/WiFi, or Bluetooth.',
         'Normal flow: add radios in Settings, watch activity in Sense/Map, inspect nodes in the Nodes tab, send traffic in Chat, and use Map for positions, overlays, routes, and field context.',
-        'MT and MC can be used together or separately. When both are active, the Nodes table, Chat, and Map show combined data. The Cross-system bridge tab appears when both are configured.',
+        'MT and MC can be used together or separately. When both are active, the Nodes table, Chat, and Map show combined data.',
         'Authentication is optional. Enable it in Settings → App → Security if the device is on a shared or accessible network. When enabled, a login page protects the dashboard and a Log out button appears in the power menu.'
       ],
       buttons: [
@@ -2303,17 +2303,13 @@
       ]
     },
     {
-      title: 'Settings - Cross-System Bridge',
-      tags: 'settings cross system bridge mt mc relay webhook automation ingest token forward message',
+      title: 'Settings - Automation Bridge',
+      tags: 'settings bridge webhook automation ingest token message',
       body: [
-        'The Cross-system tab is visible when both MT and MC radios are configured. It controls MT↔MC message forwarding and automation webhooks.',
-        'Channel bridge rules define which MT channel maps to which MC channel slot and in which direction(s) messages are forwarded. Only manually configured rules are active. There is no auto-bridge.',
         'Outbound webhooks post a JSON payload to configured URLs when a message is received. Use a shared secret for HMAC verification on the receiving end.',
         'Inbound API accepts POST requests to /api/bridge/send. Authenticate with Authorization: Bearer TOKEN or the X-OverMesh-Token header. The payload specifies the network, radio, channel/destination, and message text.'
       ],
       buttons: [
-        ['Enable bridge', 'Turn on MT↔MC message forwarding for the configured rules.'],
-        ['Add rule', 'Create a new MT↔MC channel forwarding rule.'],
         ['Enable webhooks', 'Send outbound HTTP POST notifications when messages are received.'],
         ['Enable ingest', 'Accept inbound HTTP POST messages via the bridge API endpoint.'],
         ['Save', 'Save bridge, webhook, and ingest settings.']
@@ -2706,7 +2702,6 @@ if (targetEl) {
     const doSend = async () => {
       input.value = '';
       try {
-        if (await handleCrossCommand(text)) return;
         const isDmTab = typeof chatChannel === 'string' && chatChannel.startsWith('dm:');
         const payload = isDmTab
           ? { text, channel: 0, dest_id: chatChannel.slice(3), radio_id: activeRadioId }
@@ -10215,309 +10210,8 @@ if (targetEl) {
 
   // ── Settings ───────────────────────────────────────────────────────────────
   let settingsInited = false;
-  let _crossSettings = {rules: []};
-  let _crossEditId = null;
-  let _crossChannelNames = {mt: {}, mc: {}};
-  let _crossLoadedOnce = false;
-  let _crossLoading = false;
-  let _crossDirty = false;
-  const CROSS_SYSTEM_ENABLED = false;
-
-  function _crossRuleBlank() {
-    return {
-      id: '',
-      enabled: true,
-      mode: 'mirror',
-      source_network: 'mt',
-      source_radio_id: '',
-      source_channel: 0,
-      target_radio_id: '',
-      target_channel: 0,
-      bidirectional: false,
-      sender_filter_mode: 'any',
-      sender_filters: '',
-    };
-  }
-
-  function _crossChannelLabel(net, radioId, idx) {
-    const n = (((_crossChannelNames || {})[net] || {})[radioId] || {})[idx];
-    return n || `CH${idx}`;
-  }
-
-  function _crossChannelOptions(net, radioId, selected = 0) {
-    return Array.from({length: 8}, (_, i) =>
-      `<option value="${i}" ${i === selected ? 'selected' : ''}>${escHtml(_crossChannelLabel(net, radioId, i))}</option>`
-    ).join('');
-  }
-
-  function _crossRadioEntries(net) {
-    if (net === 'mc') {
-      return Object.entries(mcLastStatus || {}).map(([id, s]) => ({
-        id,
-        name: s?.name || s?.node_name || id,
-        status: s?.status || 'disconnected',
-      }));
-    }
-    return Object.entries(lastStatus || {}).map(([id, s]) => ({
-      id,
-      name: s?.name || id,
-      status: s?.status || 'disconnected',
-    }));
-  }
-
-  function _crossRuleSummary(rule) {
-    const srcNet = (rule.source_network || 'mt').toUpperCase();
-    const dstNet = srcNet === 'MT' ? 'MC' : 'MT';
-    const srcRadio = (_crossRadioEntries(rule.source_network).find(r => r.id === rule.source_radio_id)?.name) || rule.source_radio_id || '-';
-    const dstRadio = (_crossRadioEntries(rule.source_network === 'mt' ? 'mc' : 'mt').find(r => r.id === rule.target_radio_id)?.name) || rule.target_radio_id || '-';
-    const srcCh = _crossChannelLabel(rule.source_network, rule.source_radio_id, parseInt(rule.source_channel || 0));
-    const dstCh = _crossChannelLabel(rule.source_network === 'mt' ? 'mc' : 'mt', rule.target_radio_id, parseInt(rule.target_channel || 0));
-    const arrow = rule.mode === 'bridge' ? '↔' : '→';
-    return `${srcNet} ${srcRadio} / ${srcCh} ${arrow} ${dstNet} ${dstRadio} / ${dstCh}`;
-  }
-
-  function renderCrossRulesList() {
-    const el = document.getElementById('cross-rules-list');
-    if (!el) return;
-    const rules = (_crossSettings && Array.isArray(_crossSettings.rules)) ? _crossSettings.rules : [];
-    if (!rules.length) {
-      el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:10px 12px;border:1px dashed var(--border);border-radius:6px">No cross-system rules yet.</div>';
-      return;
-    }
-    el.innerHTML = rules.map(rule => `
-      <div style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);display:grid;gap:6px">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-          <div style="font-size:13px;font-weight:600">${escHtml(_crossRuleSummary(rule))}</div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <span style="font-size:11px;color:${rule.enabled ? 'var(--accent)' : 'var(--muted)'}">${rule.enabled ? 'enabled' : 'disabled'}</span>
-            <button class="btn-secondary" style="font-size:11px;padding:3px 8px" onclick="crossToggleRule('${jsSafe(rule.id)}')">${rule.enabled ? 'Disable' : 'Enable'}</button>
-            <button class="btn-secondary" style="font-size:11px;padding:3px 8px" onclick="crossEditRule('${jsSafe(rule.id)}')">Edit</button>
-            <button class="btn-secondary" style="font-size:11px;padding:3px 8px;color:var(--red);border-color:var(--red)" onclick="crossDeleteRule('${jsSafe(rule.id)}')">Delete</button>
-          </div>
-        </div>
-        <div style="font-size:11px;color:var(--muted)">
-          ${escHtml(rule.mode === 'bridge' ? 'Bridge · both ways' : 'Mirror · one way')}
-          ${rule.sender_filter_mode !== 'any' ? ' · filtered senders' : ''}
-        </div>
-      </div>
-    `).join('');
-  }
-
-  function _renderCrossRadioOptions(sourceNet, sourceRadioId = '', targetRadioId = '', sourceChannel = 0, targetChannel = 0) {
-    const targetNet = sourceNet === 'mt' ? 'mc' : 'mt';
-    const sourceSel = document.getElementById('cross-source-radio');
-    const targetSel = document.getElementById('cross-target-radio');
-    const targetLbl = document.getElementById('cross-target-radio-label');
-    const sourceChSel = document.getElementById('cross-source-channel');
-    const targetChSel = document.getElementById('cross-target-channel');
-    if (targetLbl) targetLbl.textContent = `Target radio (${targetNet.toUpperCase()})`;
-    const srcEntries = _crossRadioEntries(sourceNet);
-    const dstEntries = _crossRadioEntries(targetNet);
-    if (sourceSel) {
-      sourceSel.innerHTML = srcEntries.length
-        ? srcEntries.map(r => `<option value="${escHtml(r.id)}" ${r.id === sourceRadioId ? 'selected' : ''}>${escHtml(r.name)}${r.status !== 'connected' ? ' (' + escHtml(r.status) + ')' : ''}</option>`).join('')
-        : '<option value="">No radios</option>';
-    }
-    if (targetSel) {
-      targetSel.innerHTML = dstEntries.length
-        ? dstEntries.map(r => `<option value="${escHtml(r.id)}" ${r.id === targetRadioId ? 'selected' : ''}>${escHtml(r.name)}${r.status !== 'connected' ? ' (' + escHtml(r.status) + ')' : ''}</option>`).join('')
-        : '<option value="">No radios</option>';
-    }
-    const srcRadio = sourceSel?.value || sourceRadioId || srcEntries[0]?.id || '';
-    const dstRadio = targetSel?.value || targetRadioId || dstEntries[0]?.id || '';
-    if (sourceChSel) sourceChSel.innerHTML = _crossChannelOptions(sourceNet, srcRadio, parseInt(sourceChannel || 0));
-    if (targetChSel) targetChSel.innerHTML = _crossChannelOptions(targetNet, dstRadio, parseInt(targetChannel || 0));
-  }
-
-  function crossSourceNetworkChanged() {
-    const srcNet = document.getElementById('cross-source-network')?.value || 'mt';
-    _renderCrossRadioOptions(srcNet);
-  }
-
-  function crossSourceRadioChanged() {
-    const srcNet = document.getElementById('cross-source-network')?.value || 'mt';
-    _renderCrossRadioOptions(srcNet,
-      document.getElementById('cross-source-radio')?.value || '',
-      document.getElementById('cross-target-radio')?.value || '',
-      parseInt(document.getElementById('cross-source-channel')?.value || '0'),
-      parseInt(document.getElementById('cross-target-channel')?.value || '0'));
-  }
-
-  function crossTargetRadioChanged() {
-    const srcNet = document.getElementById('cross-source-network')?.value || 'mt';
-    _renderCrossRadioOptions(srcNet,
-      document.getElementById('cross-source-radio')?.value || '',
-      document.getElementById('cross-target-radio')?.value || '',
-      parseInt(document.getElementById('cross-source-channel')?.value || '0'),
-      parseInt(document.getElementById('cross-target-channel')?.value || '0'));
-  }
-
-  async function _loadCrossChannelNames(mtStatus, mcStatus) {
-    const out = {
-      mt: Object.assign({}, (_crossChannelNames && _crossChannelNames.mt) || {}),
-      mc: Object.assign({}, (_crossChannelNames && _crossChannelNames.mc) || {}),
-    };
-    const mtIds = Object.keys(mtStatus || {});
-    const mcIds = Object.keys(mcStatus || {});
-    await Promise.all(mtIds.map(async rid => {
-      try {
-        const r = await fetch(BASE_PATH + `/api/chat/channels?radio_id=${encodeURIComponent(rid)}`);
-        if (!r.ok) return;
-        const rows = await r.json();
-        out.mt[rid] = Object.assign({}, out.mt[rid] || {});
-        (rows || []).forEach(ch => { out.mt[rid][ch.index] = ch.name || `CH${ch.index}`; });
-      } catch(_) {}
-    }));
-    await Promise.all(mcIds.map(async rid => {
-      try {
-        const r = await fetch(BASE_PATH + `/api/mc/${encodeURIComponent(rid)}/channels`);
-        if (!r.ok) return;
-        const rows = await r.json();
-        out.mc[rid] = Object.assign({}, out.mc[rid] || {});
-        (rows.channels || []).forEach(ch => { out.mc[rid][ch.idx] = ch.name || `CH${ch.idx}`; });
-      } catch(_) {}
-    }));
-    return out;
-  }
-
-  function _crossRuleFromEditor() {
-    const ruleId = _crossEditId || `cross_local_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const existing = ((_crossSettings && _crossSettings.rules) || []).find(r => r.id === ruleId);
-    const mode = document.getElementById('cross-mode')?.value || 'mirror';
-    return {
-      id: ruleId,
-      enabled: existing ? existing.enabled !== false : true,
-      mode,
-      bidirectional: mode === 'bridge',
-      source_network: document.getElementById('cross-source-network')?.value || 'mt',
-      source_radio_id: document.getElementById('cross-source-radio')?.value || '',
-      source_channel: parseInt(document.getElementById('cross-source-channel')?.value || '0'),
-      target_radio_id: document.getElementById('cross-target-radio')?.value || '',
-      target_channel: parseInt(document.getElementById('cross-target-channel')?.value || '0'),
-      sender_filter_mode: document.getElementById('cross-sender-filter-mode')?.value || 'any',
-      sender_filters: document.getElementById('cross-sender-filters')?.value || '',
-    };
-  }
-
-  function _crossFillEditor(rule = null) {
-    const r = Object.assign(_crossRuleBlank(), rule || {});
-    _crossEditId = r.id || null;
-    const sourceNet = r.source_network || 'mt';
-    document.getElementById('cross-mode').value = r.mode || 'mirror';
-    document.getElementById('cross-source-network').value = sourceNet;
-    document.getElementById('cross-sender-filter-mode').value = r.sender_filter_mode || 'any';
-    document.getElementById('cross-sender-filters').value = r.sender_filters || '';
-    _renderCrossRadioOptions(sourceNet, r.source_radio_id || '', r.target_radio_id || '', parseInt(r.source_channel || 0), parseInt(r.target_channel || 0));
-    _crossDirty = false;
-  }
-
-  function crossNewRule() {
-    _crossFillEditor(_crossRuleBlank());
-  }
-
-  function crossEditRule(ruleId) {
-    const rule = ((_crossSettings && _crossSettings.rules) || []).find(r => r.id === ruleId);
-    if (!rule) return;
-    _crossFillEditor(rule);
-  }
-
-  function crossDeleteRule(ruleId) {
-    _crossSettings.rules = ((_crossSettings && _crossSettings.rules) || []).filter(r => r.id !== ruleId);
-    if (_crossEditId === ruleId) crossNewRule();
-    renderCrossRulesList();
-    const statusEl = document.getElementById('cross-settings-status');
-    if (statusEl) statusEl.textContent = 'Saving...';
-    saveCrossSettings();
-  }
-
-  function crossToggleRule(ruleId) {
-    const rules = ((_crossSettings && _crossSettings.rules) || []).slice();
-    const idx = rules.findIndex(r => r.id === ruleId);
-    if (idx < 0) return;
-    rules[idx] = Object.assign({}, rules[idx], { enabled: !rules[idx].enabled });
-    _crossSettings.rules = rules;
-    renderCrossRulesList();
-    const statusEl = document.getElementById('cross-settings-status');
-    if (statusEl) statusEl.textContent = 'Saving...';
-    saveCrossSettings();
-  }
-
-  async function crossSaveEditorRule() {
-    const statusEl = document.getElementById('cross-settings-status');
-    const rule = _crossRuleFromEditor();
-    if (!rule.source_radio_id || !rule.target_radio_id) {
-      if (statusEl) statusEl.textContent = 'Select both source and target radios.';
-      return;
-    }
-    const rules = ((_crossSettings && _crossSettings.rules) || []).slice();
-    const idx = rules.findIndex(r => r.id === rule.id);
-    if (idx >= 0) rules[idx] = rule;
-    else rules.push(rule);
-    _crossSettings.rules = rules;
-    renderCrossRulesList();
-    _crossFillEditor(rule);
-    if (statusEl) statusEl.textContent = 'Saving...';
-    await saveCrossSettings();
-  }
-
-  async function loadCrossSettings() {
-    const statusEl = document.getElementById('cross-settings-status');
-    if (_crossLoading) return;
-    _crossLoading = true;
-    try {
-      const [mtResp, mcResp, crossResp] = await Promise.all([
-        fetch(BASE_PATH + '/api/status'),
-        fetch(BASE_PATH + '/api/mc/status'),
-        fetch(BASE_PATH + '/api/settings/cross'),
-      ]);
-      if (!mtResp.ok || !mcResp.ok || !crossResp.ok) throw new Error('settings load failed');
-      const mt = await mtResp.json();
-      const mc = await mcResp.json();
-      const cfg = await crossResp.json();
-      lastStatus = mt || {};
-      const mcMap = {};
-      (mc.mc_nodes || []).forEach(n => { mcMap[n.id] = n; });
-      mcLastStatus = mcMap;
-      _crossChannelNames = await _loadCrossChannelNames(lastStatus, mcMap);
-      _crossSettings = {rules: Array.isArray(cfg.rules) ? cfg.rules : []};
-      renderCrossRulesList();
-      _crossFillEditor(_crossSettings.rules[0] || _crossRuleBlank());
-      _crossLoadedOnce = true;
-      if (statusEl) statusEl.textContent = '';
-    } catch (e) {
-      if (statusEl) statusEl.textContent = 'Cross-system settings load failed.';
-      console.error('loadCrossSettings failed:', e);
-    } finally {
-      _crossLoading = false;
-    }
-  }
-
-  async function saveCrossSettings() {
-    const statusEl = document.getElementById('cross-settings-status');
-    const payload = { rules: (_crossSettings && _crossSettings.rules) || [] };
-    if (statusEl) statusEl.textContent = 'Saving...';
-    try {
-      const r = await fetch(BASE_PATH + '/api/settings/cross', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(payload)
-      });
-      const data = await r.json().catch(() => ({}));
-      if (!r.ok || data.error) throw new Error(data.error || r.status);
-      _crossSettings = data.cross || {rules: payload.rules || []};
-      renderCrossRulesList();
-      _crossFillEditor(_crossSettings.rules.find(r => r.id === _crossEditId) || _crossSettings.rules[0] || _crossRuleBlank());
-      if (statusEl) statusEl.textContent = 'Saved.';
-      _crossDirty = false;
-    } catch (e) {
-      if (statusEl) statusEl.textContent = String(e.message || e);
-      console.error('saveCrossSettings failed:', e);
-    }
-  }
-
   function switchSettingsTab(name) {
-    if (name === 'cross' && !CROSS_SYSTEM_ENABLED) name = 'mt';
-    ['mt', 'mc', 'app', 'cross'].forEach(t => {
+    ['mt', 'mc', 'app'].forEach(t => {
       document.getElementById('st-' + t).style.display = t === name ? '' : 'none';
       document.getElementById('stab-' + t).classList.toggle('active', t === name);
     });
@@ -10533,7 +10227,6 @@ if (targetEl) {
       loadPassiveIntelManager();
       renderPassiveCollectors();
     }
-    if (CROSS_SYSTEM_ENABLED && name === 'cross' && !_crossLoadedOnce) loadCrossSettings();
   }
 
   let _settingsUpdatePoll = null;
@@ -10991,7 +10684,6 @@ if (targetEl) {
     loadGpsSettings();
     if (!settingsInited) {
       settingsInited = true;
-      if (CROSS_SYSTEM_ENABLED && localStorage.getItem('settingsTab') !== 'cross' && !_crossLoadedOnce) loadCrossSettings();
       settingsScanPorts();
       settingsLoadUpdateStatus(false);
       fetch(BASE_PATH + '/api/settings/app').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(cfg => {
@@ -10999,10 +10691,6 @@ if (targetEl) {
       }).catch(e => console.error('settings/app fetch failed:', e));
       loadAuthSettings();
     }
-  }
-
-  function _crossMarkDirty() {
-    _crossDirty = true;
   }
 
   function settingsRefresh() {
@@ -11502,188 +11190,6 @@ if (targetEl) {
     ].join('|');
   }
 
-  function _parseCrossCommand(text) {
-    const m = (text || '').trim().match(/^\/(mt|mc)(?:\s+|)([@#][^\s]+)\s+([\s\S]+)$/i);
-    if (!m) return null;
-    return {
-      network: m[1].toLowerCase(),
-      target: m[2],
-      text: (m[3] || '').trim(),
-    };
-  }
-
-  function _crossNormTarget(s) {
-    return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
-  }
-
-  function _crossPickBestTarget(raw, entries, label) {
-    const qRaw = String(raw || '').trim().toLowerCase();
-    const qNorm = _crossNormTarget(raw);
-    const scored = [];
-    entries.forEach(entry => {
-      let best = 0;
-      (entry.keys || []).forEach(k => {
-        const rawKey = String(k || '').trim().toLowerCase();
-        const normKey = _crossNormTarget(k);
-        if (!rawKey) return;
-        if (rawKey === qRaw) best = Math.max(best, 100);
-        else if (normKey && normKey === qNorm) best = Math.max(best, 95);
-        else if (rawKey.startsWith(qRaw)) best = Math.max(best, 80);
-        else if (normKey && qNorm && normKey.startsWith(qNorm)) best = Math.max(best, 75);
-        else if (rawKey.includes(qRaw)) best = Math.max(best, 60);
-        else if (normKey && qNorm && normKey.includes(qNorm)) best = Math.max(best, 55);
-      });
-      if (best > 0) scored.push({score: best, entry});
-    });
-    if (!scored.length) return { error: `${label} "${raw}" not found.` };
-    scored.sort((a, b) => b.score - a.score || String(a.entry.display || '').localeCompare(String(b.entry.display || '')));
-    if (scored.length > 1 && scored[0].score === scored[1].score) {
-      const names = scored.slice(0, 3).map(x => x.entry.display).join(', ');
-      return { error: `${label} "${raw}" is ambiguous: ${names}` };
-    }
-    return scored[0].entry;
-  }
-
-  function _resolveMtCommandTarget(token, radioId = null) {
-    if (!token) return { error: 'Missing MT target.' };
-    if (token.startsWith('#')) {
-      const ch = parseInt(token.slice(1), 10);
-      if (!Number.isInteger(ch) || ch < 0 || ch > 7) return { error: 'MT channel must be 0-7.' };
-      return { kind: 'channel', channel: ch };
-    }
-    if (!token.startsWith('@')) return { error: 'MT target must start with @ or #.' };
-    const raw = token.slice(1).trim();
-    if (!raw) return { error: 'Missing MT target name.' };
-    const entries = (allNodes || [])
-      .filter(n => !radioId || n.radio_id === radioId)
-      .map(n => ({
-      dest_id: n.id,
-      to_name: n.long_name || n.short_name || n.id,
-      display: n.long_name || n.short_name || n.id,
-      keys: [n.id, n.long_name, n.short_name],
-    }));
-    const match = _crossPickBestTarget(raw, entries, 'MT target');
-    if (match.error) return match;
-    return { kind: 'dm', dest_id: match.dest_id, to_name: match.to_name };
-  }
-
-  function _resolveMcCommandTarget(token) {
-    if (!token) return { error: 'Missing MC target.' };
-    if (token.startsWith('#')) {
-      const ch = parseInt(token.slice(1), 10);
-      // MC channel_idx is a single byte → 0-255. The device's real max_channels
-      // is enforced by the backend; this is just a cheap sanity bound.
-      if (!Number.isInteger(ch) || ch < 0 || ch > 255) return { error: 'MC channel must be 0-255.' };
-      return { kind: 'channel', channel: ch };
-    }
-    if (!token.startsWith('@')) return { error: 'MC target must start with @ or #.' };
-    const raw = token.slice(1).trim();
-    if (!raw) return { error: 'Missing MC target name.' };
-    const entries = [];
-    const radios = activeMcRadioId ? [activeMcRadioId, ...Object.keys(mcContacts).filter(id => id !== activeMcRadioId)] : Object.keys(mcContacts);
-    for (const rid of radios) {
-      const contacts = mcContacts[rid] || {};
-      for (const [pre, c] of Object.entries(contacts)) {
-        entries.push({
-          kind: 'dm',
-          target: pre,
-          to_name: c.long_name || c.id || pre,
-          radio_id: rid,
-          display: `${c.long_name || c.id || pre} (${mcLastStatus[rid]?.name || rid})`,
-          keys: [pre, c.full_key, c.id, c.long_name, c.short_name],
-        });
-      }
-    }
-    const match = _crossPickBestTarget(raw, entries, 'MC target');
-    if (match.error) return match;
-    return { kind: 'dm', target: match.target, to_name: match.to_name, radio_id: match.radio_id };
-  }
-
-  async function _sendMtCommand(target, text) {
-    if (!activeRadioId) throw new Error('No active MT radio.');
-    const payload = target.kind === 'dm'
-      ? { text, channel: 0, dest_id: target.dest_id, radio_id: activeRadioId }
-      : { text, channel: target.channel, radio_id: activeRadioId };
-    const r = await fetch(BASE_PATH + '/api/chat/send', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload)
-    });
-    if (!r.ok) throw new Error(await r.text());
-  }
-
-  function _queueMcLocalMessage(radioId, text, opts = {}) {
-    const msgId = _mcLocalMsgId();
-    mcMessages.push({
-      id: msgId,
-      type: 'mc_message',
-      radio_id: radioId,
-      radio_name: mcLastStatus[radioId]?.name || '',
-      network: 'mc',
-      subtype: opts.kind === 'dm' ? 'dm' : 'channel',
-      channel: opts.kind === 'channel' ? opts.channel : undefined,
-      from_id: 'me',
-      to_id: opts.kind === 'dm' ? opts.target : undefined,
-      text,
-      ts: Math.floor(Date.now()/1000),
-      sent: true,
-      status: 'pending',
-    });
-    _saveMcMessages();
-    renderMcMessages();
-    return msgId;
-  }
-
-  async function _sendMcCommand(target, text) {
-    const radioId = target.radio_id || activeMcRadioId;
-    if (!radioId) throw new Error('No active MC radio.');
-    const chunks = _mcSplitTextByBytes(text, _mcTargetMsgLimit(target.kind, radioId));
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i];
-      const msgId = _queueMcLocalMessage(radioId, chunk, target);
-      try {
-        const endpoint = target.kind === 'dm'
-          ? `/api/mc/${encodeURIComponent(radioId)}/send_dm`
-          : `/api/mc/${encodeURIComponent(radioId)}/send_chan`;
-        const body = target.kind === 'dm'
-          ? { target: target.target, text: chunk, client_msg_id: msgId }
-          : { text: chunk, channel: target.channel, client_msg_id: msgId };
-        const r = await fetch(endpoint, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(body),
-        });
-        const data = await r.json().catch(() => ({}));
-        if (!r.ok || data.error) throw new Error(data.error || r.status);
-        const localMsg = mcMessages.find(x => x.id === msgId);
-        if (localMsg && data.message) Object.assign(localMsg, data.message, { status: 'delivered' });
-        else _setMcMsgStatus(msgId, 'delivered');
-        _saveMcMessages();
-        renderMcMessages();
-      } catch (e) {
-        _setMcMsgStatus(msgId, 'failed');
-        throw e;
-      }
-      if (chunks.length > 1 && i < chunks.length - 1) await _sleep(MC_SPLIT_SEND_DELAY_MS);
-    }
-  }
-
-  async function handleCrossCommand(rawText) {
-    if (!CROSS_SYSTEM_ENABLED) return false;
-    const cmd = _parseCrossCommand(rawText);
-    if (!cmd) return false;
-    if (!cmd.text) throw new Error('Message text required.');
-    if (cmd.network === 'mt') {
-      const target = _resolveMtCommandTarget(cmd.target, activeRadioId);
-      if (target.error) throw new Error(target.error);
-      await _sendMtCommand(target, cmd.text);
-      return true;
-    }
-    const target = _resolveMcCommandTarget(cmd.target);
-    if (target.error) throw new Error(target.error);
-    await _sendMcCommand(target, cmd.text);
-    return true;
-  }
   function _setMcMsgStatus(msgId, status) {
     const m = mcMessages.find(x => x.id === msgId);
     if (!m) return;
@@ -11840,16 +11346,9 @@ if (targetEl) {
     // Settings MC tab button: visible when not force-hidden — user can reach it to add first MC radio
     const stabMc = document.getElementById('stab-mc');
     if (stabMc) stabMc.style.display = !forcedHide ? '' : 'none';
-    // Cross-system tab: parked for now.
-    // To re-enable: change `'none'` → `show ? '' : 'none'`
-    const stabCross = document.getElementById('stab-cross');
-    if (stabCross) stabCross.style.display = 'none';
     // st-mc content: hide only when forcedHide (keeps MC Radios list accessible to add first radio)
     const stMc = document.getElementById('st-mc');
     if (stMc && forcedHide) stMc.style.display = 'none';
-    // st-cross: hide when no MC radios
-    const stCross = document.getElementById('st-cross');
-    if (stCross && !show) stCross.style.display = 'none';
     // Map legend — sync with current network visibility state
     _updateMapLegend();
     // MC pill in Nodes tab + MT pill (only makes sense when both networks are visible)
@@ -11887,7 +11386,6 @@ if (targetEl) {
       if (chatNetwork === 'mc') setChatNetwork('mt');
       // Fall back from hidden settings tabs
       const activeStab = document.querySelector('.settings-tab.active');
-      if (activeStab && activeStab.id === 'stab-cross') switchSettingsTab('mt');
       if (activeStab && activeStab.id === 'stab-mc' && forcedHide) switchSettingsTab('mt');
     } else {
       // MC is shown — restore mc-radio-selector display (updateMcPills fills it)
@@ -15871,7 +15369,6 @@ if (targetEl) {
       _mcUpdateByteCount();
       let sentAny = false;
       try {
-        if (await handleCrossCommand(text)) return;
         if (mcChatTab.startsWith('dm:')) {
           const pre = mcChatTab.slice(3);
           for (let i = 0; i < chunks.length; i++) {

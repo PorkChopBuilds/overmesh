@@ -9,9 +9,6 @@
   "sense_passive": true,
   "sense_active_auto": false,
   "mc_nodes": [],
-  "cross": {
-    "rules": []
-  },
   "bridge": {
     "webhooks": {
       "enabled": false,

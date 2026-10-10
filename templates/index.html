@@ -1026,7 +1026,6 @@
       <button class="settings-tab active" id="stab-mt"    onclick="switchSettingsTab('mt')"    title="Meshtastic node settings">Meshtastic</button>
       <button class="settings-tab"        id="stab-mc"    onclick="switchSettingsTab('mc')"    style="display:none" title="MeshCore radio settings">MeshCore</button>
       <button class="settings-tab"        id="stab-app"   onclick="switchSettingsTab('app')"   title="App preferences, theme, and map tiles">App</button>
-      <button class="settings-tab"        id="stab-cross" onclick="switchSettingsTab('cross')" style="display:none" title="Cross-system bridge settings (MT ↔ MC)">Cross-system</button>
     </div>
 
     <div id="st-mt">
@@ -2462,82 +2461,6 @@
     </div>
 
     </div><!-- /st-app -->
-
-    <div id="st-cross" style="display:none">
-    <div class="settings-section">
-      <h2 class="settings-title">Cross-system</h2>
-      <p style="color:var(--muted);font-size:12px;margin:0 0 10px">Manual MT↔MC channel mirror / bridge. Forwarded messages are always tagged with source system and original sender.</p>
-      <div style="display:grid;gap:10px;max-width:760px">
-        <div id="cross-rules-list" style="display:grid;gap:8px"></div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <button class="btn" onclick="crossNewRule()">New rule</button>
-          <button class="btn" onclick="crossSaveEditorRule()">Add / Update rule</button>
-          <span id="cross-settings-status" style="font-size:12px;color:var(--muted)"></span>
-        </div>
-        <div style="font-size:12px;color:var(--muted)">Rule editor</div>
-        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
-          <label style="display:grid;gap:4px;font-size:12px">
-            <span>Mode</span>
-            <select id="cross-mode" onchange="_crossMarkDirty()">
-              <option value="mirror">Mirror</option>
-              <option value="bridge">Bridge</option>
-            </select>
-          </label>
-          <div style="font-size:12px;color:var(--muted);padding-top:22px">Mirror = one way. Bridge = both ways.</div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px">
-          <div style="display:grid;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg2)">
-            <div style="font-size:12px;font-weight:600;color:var(--text)">Source</div>
-            <label style="display:grid;gap:4px;font-size:12px">
-              <span>Source system</span>
-              <select id="cross-source-network" onchange="crossSourceNetworkChanged();_crossMarkDirty()">
-                <option value="mt">MT</option>
-                <option value="mc">MC</option>
-              </select>
-            </label>
-            <label style="display:grid;gap:4px;font-size:12px">
-              <span>Source radio</span>
-              <select id="cross-source-radio" onchange="crossSourceRadioChanged();_crossMarkDirty()"></select>
-            </label>
-            <label style="display:grid;gap:4px;font-size:12px">
-              <span>Source channel</span>
-              <select id="cross-source-channel" onchange="_crossMarkDirty()"></select>
-            </label>
-          </div>
-          <div style="display:grid;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg2)">
-            <div style="font-size:12px;font-weight:600;color:var(--text)">Target</div>
-            <label style="display:grid;gap:4px;font-size:12px">
-              <span id="cross-target-radio-label">Target radio</span>
-              <select id="cross-target-radio" onchange="crossTargetRadioChanged();_crossMarkDirty()"></select>
-            </label>
-            <label style="display:grid;gap:4px;font-size:12px">
-              <span>Target channel</span>
-              <select id="cross-target-channel" onchange="_crossMarkDirty()"></select>
-            </label>
-            <label style="display:grid;gap:4px;font-size:12px">
-              <span>Sender filter</span>
-              <select id="cross-sender-filter-mode" onchange="_crossMarkDirty()">
-                <option value="any">Any sender</option>
-                <option value="allow">Only these</option>
-                <option value="block">All except these</option>
-              </select>
-            </label>
-          </div>
-        </div>
-        <label style="display:grid;gap:4px;font-size:12px">
-          <span>Sender list</span>
-          <input type="text" id="cross-sender-filters" placeholder="Comma-separated names or IDs" oninput="_crossMarkDirty()">
-        </label>
-        <div style="color:var(--muted);font-size:11px;padding:12px;background:var(--bg3);border-radius:6px;border:1px solid var(--border);line-height:1.6">
-          <strong>Current scope:</strong> manual MT↔MC channel rules only.<br>
-          <strong>Mirror</strong> sends traffic one way, from the selected source channel to the selected target channel. Use it for monitoring, snooping, or copying one network into the other.<br>
-          <strong>Bridge</strong> links the two selected channels both ways, so messages from either side are forwarded to the other.<br>
-          <strong>Sender filter</strong> can limit forwarding to specific names/IDs, or exclude selected ones.<br>
-          Every forwarded message is clearly tagged with source system, original sender, and source channel, for example <code>[MT-&gt;MC Name / CH0]</code> or <code>[MC-&gt;MT Name / CH2]</code>.
-        </div>
-      </div>
-    </div>
-    </div><!-- /st-cross -->
 
   </div>
 

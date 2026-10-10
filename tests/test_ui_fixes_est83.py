@@ -10,14 +10,30 @@ can't fail isn't a check" rule).
 Red-first: every method here was run against the pre-fix source and failed,
 then passed after the fix, in the same commit.
 """
+import json
 import os
 import re
+import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 APP_JS = ROOT / "static/js/app.js"
 INDEX = ROOT / "templates/index.html"
+
+# The url_map test imports the Flask app, which reads config at import time.
+# Use a throwaway config/data dir exactly like the other route tests do.
+_TEST_DIR = tempfile.TemporaryDirectory(prefix="overmesh-est83-test-")
+_TEST_ROOT = Path(_TEST_DIR.name)
+(_TEST_ROOT / "data").mkdir(parents=True, exist_ok=True)
+(_TEST_ROOT / "config.json").write_text(
+    json.dumps({"nodes": [], "mc_nodes": [], "app": {}, "gps": {}, "silent_mode": False}),
+    encoding="utf-8",
+)
+os.environ.setdefault("OVERMESH_CONFIG", str(_TEST_ROOT / "config.json"))
+os.environ.setdefault("OVERMESH_DATA_DIR", str(_TEST_ROOT / "data"))
+sys.path.insert(0, str(ROOT))
 
 
 def _js() -> str:
@@ -140,6 +156,51 @@ class TestDeadControlRemoved(unittest.TestCase):
                          "C3: the dead RC-obs toggle must be removed from Settings")
         self.assertEqual(_js().count("alert_log_rc_obs"), 0,
                          "C3: saveAlertLogPrefs/loadAlertLogPrefs must not carry the dead key")
+
+
+class TestCrossSystemRemoved(unittest.TestCase):
+    """H1: the parked MT↔MC Cross-system feature is gone, not just hidden.
+
+    It was never enabled (CROSS_SYSTEM_ENABLED = false), so every code path it
+    owned was unreachable: the hidden settings tab, the /mt //mc chat command,
+    the rule routes, cross.py and its forward hooks. A stored `cross` config key
+    is still harmless — nothing reads it any more.
+    """
+
+    def test_backend_is_gone(self):
+        self.assertFalse((ROOT / "cross.py").exists(), "H1: cross.py must be deleted")
+        self.assertFalse((ROOT / "tests/test_cross.py").exists(),
+                         "H1: the cross.py-only test must go with it")
+        settings = (ROOT / "routes/settings.py").read_text(encoding="utf-8")
+        self.assertEqual(settings.count("api_settings_cross"), 0,
+                         "H1: /api/settings/cross routes must be removed")
+        self.assertEqual(settings.count("from cross import"), 0,
+                         "H1: routes/settings must not import cross")
+        for rel in ("mesh.py", "mesh_mc.py", "routes/chat.py", "routes/mc.py"):
+            text = (ROOT / rel).read_text(encoding="utf-8")
+            self.assertEqual(text.count("maybe_forward_m"), 0,
+                             f"H1: {rel} must not call the cross forward hook")
+
+    def test_client_is_gone(self):
+        src = _js()
+        html = _html()
+        for needle in ("CROSS_SYSTEM_ENABLED", "stab-cross", "st-cross",
+                       "_crossSettings", "handleCrossCommand", "/api/settings/cross"):
+            self.assertEqual(src.count(needle), 0, f"H1: app.js still mentions {needle}")
+        for needle in ("stab-cross", 'id="st-cross"'):
+            self.assertEqual(html.count(needle), 0, f"H1: index.html still mentions {needle}")
+
+    def test_url_map_has_no_cross_rule(self):
+        import app as app_module
+        rules = {r.rule for r in app_module.app.url_map.iter_rules()}
+        self.assertNotIn("/api/settings/cross", rules)
+
+    def test_docs_say_it_was_removed(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("Cross-system forwarding was removed", readme,
+                      "H1: the docs must say the parked feature was removed in 2026-10")
+        self.assertEqual(readme.count("cross.py"), 0,
+                         "H1: the project-structure table must not list a deleted file")
 
 
 if __name__ == "__main__":

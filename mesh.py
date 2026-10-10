@@ -16,7 +16,6 @@ from pubsub import pub
 
 from bot import handle_bot_command
 from config import CONFIG, CONFIG_LOCK, DATA_DIR, save_config
-from cross import maybe_forward_mt_message
 from db import get_prefs_db, init_msgs_db, load_messages, save_message, update_message_status
 from bridge import publish_inbound_message
 from helpers import _next_msg_id, _radio_id_for_iface, get_node_name, mt_channel_name, push_to_sse
@@ -379,7 +378,6 @@ def on_text_receive(packet, interface):
         save_message(msg)
         push_to_sse(json.dumps(msg))
         publish_inbound_message(msg)
-        threading.Thread(target=maybe_forward_mt_message, args=(dict(msg),), daemon=True).start()
         handle_bot_command(packet, interface)
     except Exception as e:
         log.warning(f"Chat receive error: {e}")
