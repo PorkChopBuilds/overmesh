@@ -6,7 +6,7 @@ from flask import Blueprint, jsonify, request
 
 import sense as _sense_mod
 from config import CONFIG, CONFIG_LOCK, save_config
-from helpers import push_to_sse
+from helpers import _as_bool, push_to_sse
 from mesh import get_any_iface, get_iface_by_radio
 from sense import (
     _active_auto_event,
@@ -53,8 +53,17 @@ def api_mesh_sense():
 
 @bp.route("/api/mesh/sense/passive", methods=["POST"])
 def api_sense_passive():
+    """Set passive capture to the requested value.
+
+    {"enabled": bool} sets that value (via _as_bool); a body without "enabled"
+    keeps the legacy toggle behaviour for old callers (EST-82 B7).
+    """
+    data = request.get_json(silent=True) or {}
     with _sense_lock:
-        new_val = not _sense_state["passive"]
+        if "enabled" in data:
+            new_val = _as_bool(data["enabled"])
+        else:
+            new_val = not _sense_state["passive"]
         _sense_state["passive"] = new_val
     with CONFIG_LOCK:
         CONFIG["sense_passive"] = new_val

@@ -398,12 +398,32 @@ function toggleMapMenu() {
 function closeMapMenu() { _mapMenuOpen = false; document.getElementById('map-menu-panel').hidden = true; }
 
 function toggleSense() {
-  S.senseOn = !S.senseOn;
+  // Send the desired state and adopt the server's answer, so the UI can never be
+  // inverted from the actual passive-capture state (EST-82 B7).
+  const desired = !S.senseOn;
   fetch('/api/mesh/sense/passive', { method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ enabled: S.senseOn }) }).catch(() => {});
-  toast(S.senseOn ? 'Sense: ON' : 'Sense: OFF');
-  _applyMapMode(S.senseOn ? 'sense' : 'map');
+    body: JSON.stringify({ enabled: desired }) })
+    .then(r => r.json())
+    .then(d => {
+      S.senseOn = typeof d.passive === 'boolean' ? d.passive : desired;
+      toast(S.senseOn ? 'Sense: ON' : 'Sense: OFF');
+      _applyMapMode(S.senseOn ? 'sense' : 'map');
+    })
+    .catch(() => toast('Sense toggle failed'));
   closeMapMenu();
+}
+
+function syncSenseOn() {
+  // Passive capture is server-side state; align the Lite toggle with it on load.
+  fetch('/api/mesh/sense/status')
+    .then(r => r.json())
+    .then(d => {
+      if (typeof d.passive === 'boolean') {
+        S.senseOn = d.passive;
+        _applyMapMode(S.senseOn ? 'sense' : 'map');
+      }
+    })
+    .catch(() => {});
 }
 
 function toggleTrace() {
@@ -3335,6 +3355,7 @@ function init() {
   startClock();
   document.getElementById('btn-follow')?.classList.toggle('active', S.followGps);
   loadRadios();
+  syncSenseOn();
   setTimeout(() => {
     loadNodes();
     loadChannels();
