@@ -774,7 +774,13 @@ def api_mc_contact_notes_get(pubkey_id):
 @bp.route("/api/mc/contact/<pubkey_id>/notes", methods=["PATCH"])
 def api_mc_contact_notes_set(pubkey_id):
     data = request.get_json(silent=True) or {}
-    notes_json = data.get("notes", "{}")
+    notes = data.get("notes", "{}")
+    if isinstance(notes, dict):
+        notes_json = json.dumps(notes)
+    elif isinstance(notes, str):
+        notes_json = notes
+    else:
+        return jsonify({"error": "notes must be a string or object"}), 400
     set_mc_note(pubkey_id, notes_json)
     return jsonify({"ok": True})
 

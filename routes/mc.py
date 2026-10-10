@@ -1696,7 +1696,12 @@ def api_mc_passive_obs_delete(radio_id):
 def api_mc_passive_obs_cleanup(radio_id):
     """Delete observations older than ttl_days (default 30)."""
     data = request.get_json(silent=True) or {}
-    ttl_days = int(data.get("ttl_days", 30))
+    try:
+        ttl_days = int(data.get("ttl_days", 30))
+    except (TypeError, ValueError):
+        return jsonify({"error": "ttl_days must be an integer >= 1"}), 400
+    if ttl_days < 1:
+        return jsonify({"error": "ttl_days must be an integer >= 1"}), 400
     try:
         deleted = cleanup_passive_obs(radio_id, ttl_days=ttl_days)
         return jsonify({"ok": True, "deleted": deleted})
