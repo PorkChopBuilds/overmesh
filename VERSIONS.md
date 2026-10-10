@@ -10,6 +10,13 @@ OverMesh uses date-based release versions:
 
 The version in `VERSION` must be updated every time an OverMesh update is pushed to GitHub. The Settings updater also shows the Git commit hash for exact build identification.
 
+## 2026.10.11.1
+
+- Housekeeping batch. On-screen text no longer contains em dashes (the long dashes in labels, tooltips, pop-ups and error messages are gone).
+- Fixes: the text "false" no longer turns a settings toggle on; Silent Running now blocks GPS pushes and automatic GPS pushes; the Automation Bridge works while a login is enabled; the Sense button shows the remaining cooldown; Ignore/Mute and a failed map DM send report the failure instead of silently changing the row or losing the text; OM Lite Log import and the Lite Sense toggle are fixed; malformed passive-obs cleanup and contact-notes input returns a clear 400.
+- New: a yellow top update banner (available vs installed version, "Open updates", dismiss per release) on both the main UI and OM Lite; a network-aware New Mark / Self Note dialog that can also add the note to the Log; an honest MeshCore message path-confidence badge ("path unconfirmed" instead of an often-wrong confidence).
+- Removed: the parked Cross-system forwarding feature (never enabled, a stored cross key is now ignored), three dead API endpoints, the do-nothing "RC collector obs count" alert toggle, and two unreferenced vendored JavaScript files.
+
 ## 2026.09.06.5
 
 - Packets heard with **no relay hops** now show as an expanding, fading ring on our own radio instead of nothing at all. A directly-heard packet has no route to draw (the sender is inside the encrypted payload), so the previous release silently dropped it — which is what happened when a message was sent from a nearby node and nothing appeared on the map.

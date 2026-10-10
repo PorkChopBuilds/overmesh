@@ -1,5 +1,38 @@
 # OverMesh Release Notes
 
+## 2026.10.11.1
+
+This is a housekeeping release. There is nothing new to learn, but a lot of small things that were wrong, unclear or quietly broken are now fixed.
+
+### Fixed
+
+- On-screen text no longer contains em dashes. The long dashes used in labels, tooltips, pop-ups and error messages are gone, so the interface reads cleanly and the same way everywhere.
+- Settings toggles now treat the text "false" as off. A caller sending a boolean as text (curl, Home Assistant, a script) used to switch the flag on no matter what it said.
+- Silent Running now also blocks GPS pushes and automatic GPS pushes, matching every other transmit path.
+- The Automation Bridge works while a login is enabled. It was answering 401 before its own token was ever checked, which broke the documented Home Assistant setup.
+- The Sense button on cooldown now shows the remaining time instead of doing nothing visible.
+- Ignore and Mute now report a failure instead of changing the row locally and then snapping back on the next refresh.
+- A failed map DM send keeps your typed text and shows what went wrong.
+- Chat and map send errors now show the server's own message instead of raw JSON.
+- OM Lite Log import works again. It was uploading a file the server could not read.
+- The OM Lite Sense toggle no longer starts inverted and now follows the server's actual state.
+- Bad input to passive-observation cleanup and contact notes now returns a clear 400 instead of an error page.
+
+### New and improved
+
+- A yellow update banner across the top of the page tells you when a newer OverMesh release is available, showing the available and installed versions, an "Open updates" button and a dismiss X. Dismissal is remembered per release, so silencing one release does not hide the next one. OM Lite shows the same banner.
+- The New Mark / Self Note dialog is network-aware. On a MeshCore-only map it offers just the Self Note tab, because MeshCore has no waypoint message; on Meshtastic it shows the "Mark (MT waypoint)" tab. The Self Note tab can also add the note to the Log.
+- The MeshCore message badge is now honest about how sure OverMesh is that it matched a received packet to a message. It says "path unconfirmed" when the packet could not be confirmed, instead of showing a confidence that was almost always low.
+
+### Removed
+
+- The parked Cross-system forwarding feature has been removed. It was never enabled, so nothing changes for a normal install, and a stored cross configuration key is simply ignored from now on.
+- Three dead API endpoints, a do-nothing "RC collector obs count" alert toggle, and two vendored JavaScript files that nothing referenced were removed.
+
+---
+
+## Earlier notes
+
 This is the point where OverMesh stops being just the older Meshtastic dashboard with some MeshCore work around it, and becomes the real MT plus MC app.
 
 The main change is simple: Meshtastic and MeshCore now live in one interface and are treated as equal parts of the same tool. The app is still local first, still self-hosted, and still built around real radio use.
