@@ -2639,18 +2639,26 @@ function exportLog(fmt='text') {
 function importLog(ev) {
   const file = ev.target.files?.[0];
   if (!file) return;
-  const fd = new FormData();
-  fd.append('file', file);
-  fetch('/api/toc/import', { method: 'POST', body: fd })
-    .then(r => r.json()).then(d => {
-      if (d.error) {
-        toast('Import failed: ' + d.error);
-      } else {
+  // Same JSON contract as app.js tocImportFile(): read the file and POST
+  // {filename, content}. The route reads JSON only — a multipart upload just
+  // returned "Upload a TOC JSON or TXT export." (EST-82 B4).
+  file.text().then(content => {
+    fetch('/api/toc/import', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({filename: file.name, content})
+    }).then(r => r.json().then(d => ({ok: r.ok, d})))
+      .then(({ok, d}) => {
+        if (!ok || d.error) throw new Error((d && d.error) || 'Import failed');
         toast(d.imported != null ? `Imported ${d.imported} entries` : 'Import done');
         loadLog();
-      }
-    }).catch(() => toast('Import error'));
-  ev.target.value = '';
+      })
+      .catch(e => toast('Import failed: ' + e.message))
+      .finally(() => { ev.target.value = ''; });
+  }).catch(e => {
+    toast('Import failed: ' + e.message);
+    ev.target.value = '';
+  });
 }
 
 function jsSafe(s) {
