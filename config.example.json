@@ -4,7 +4,7 @@
   "host": "127.0.0.1",
   "app": {
     "zoom": 100,
-    "accent_color": "#4ade80"
+    "accent_color": "#ab5dee"
   },
   "sense_passive": true,
   "sense_active_auto": false,

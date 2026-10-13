@@ -37,3 +37,9 @@ node_modules/
 # OS
 .DS_Store
 Thumbs.db
+
+# Native Mac packaging
+.macos-build-env/
+build/
+dist/
+macos/OverMesh.icns
