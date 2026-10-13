@@ -13,7 +13,7 @@ final class DesktopApp: NSObject, NSApplicationDelegate, WKNavigationDelegate, W
     var quitting = false
     let token = UUID().uuidString
     let data = URL(fileURLWithPath: ProcessInfo.processInfo.environment["OVERMESH_DESKTOP_DATA"] ?? NSHomeDirectory() + "/Library/Application Support/OverMesh")
-    var deadline = Date().addingTimeInterval(45)
+    var deadline = Date().addingTimeInterval(90)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let menu = NSMenu()
@@ -78,7 +78,7 @@ final class DesktopApp: NSObject, NSApplicationDelegate, WKNavigationDelegate, W
            let text = status["url"] as? String, let url = URL(string: text), url.host == "127.0.0.1", url.scheme == "http" {
             ready = true
             if currentURL != url { currentURL = url; web.load(URLRequest(url: url)) }
-        } else if !ready && Date() > deadline { fail("The local service did not start within 45 seconds. See OverMesh.log in Library/Application Support/OverMesh.") }
+        } else if !ready && Date() > deadline { fail("The local service did not start within 90 seconds. See OverMesh.log in Library/Application Support/OverMesh.") }
     }
 
     func backendStopped(_ status: Int32) {

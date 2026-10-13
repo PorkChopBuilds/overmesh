@@ -33,7 +33,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: native-window-diagnostics
-          path: ${{ runner.temp }}/native-window
+          path: |
+            ${{ runner.temp }}/native-window/*.log
+            ${{ runner.temp }}/native-window/native-*.json
+            ${{ runner.temp }}/native-window/*.png
+            ${{ runner.temp }}/lifecycle/*.log
+            ${{ runner.temp }}/backend/*.log
       - name: Package and publish Desktop beta
         env:
           GH_TOKEN: ${{ github.token }}

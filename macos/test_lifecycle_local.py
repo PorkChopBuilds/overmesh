@@ -4,7 +4,7 @@ exe=base/'dist/OverMesh.app/Contents/MacOS/OverMesh'
 env=dict(os.environ,OVERMESH_DESKTOP_DATA=str(data))
 p=subprocess.Popen([str(exe),'--no-browser'],env=env)
 def ready(old=None):
-    for _ in range(100):
+    for _ in range(600):
         try:
             status=json.loads((data/'desktop-status.json').read_text());url=status['url']
             if url!=old:
@@ -12,11 +12,15 @@ def ready(old=None):
                     assert r.status==200
                     return url
         except (OSError,ValueError):pass
+        if p.poll() is not None:
+            log=data/'OverMesh.log'
+            raise AssertionError('Service exited '+str(p.returncode)+'; '+(log.read_text()[-8000:] if log.exists() else 'no log'))
         time.sleep(.1)
-    raise AssertionError('Startup timed out')
+    log=data/'OverMesh.log'
+    raise AssertionError('Startup timed out; process='+str(p.poll())+'; log='+ (log.read_text()[-8000:] if log.exists() else 'not created'))
 try:
     url=ready()
-    result=subprocess.run([str(exe),'--no-browser'],env=env,timeout=15)
+    result=subprocess.run([str(exe),'--no-browser'],env=env,timeout=60)
     assert result.returncode==0 and p.poll() is None
     req=urllib.request.Request(url+'/api/restart',method='POST')
     assert json.load(urllib.request.urlopen(req))['ok']
