@@ -35,6 +35,8 @@ def main():
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError:
+        if '--native-desktop' in sys.argv:
+            raise SystemExit(73)
         # A second click opens the running dashboard instead of silently exiting.
         for _ in range(50):
             try:
@@ -85,9 +87,17 @@ def main():
     app.app.view_functions['api_restart'] = restart_app
     signal.signal(signal.SIGTERM, lambda *_: stop.set())
     signal.signal(signal.SIGINT, lambda *_: stop.set())
+    parent_pid = int(os.environ.get('OVERMESH_PARENT_PID', '0'))
+    if parent_pid:
+        def monitor_parent():
+            while not stop.wait(1):
+                if os.getppid() != parent_pid:
+                    stop.set()
+                    return
+        threading.Thread(target=monitor_parent, daemon=True).start()
     app.startup()
     threading.Thread(target=server.serve_forever, daemon=True).start()
-    (data / 'desktop-status.json').write_text(json.dumps({'pid': os.getpid(), 'url': url}))
+    (data / 'desktop-status.json').write_text(json.dumps({'pid': os.getpid(), 'url': url, 'native_token': os.environ.get('OVERMESH_NATIVE_TOKEN', '')}))
     logging.info('OverMesh dashboard ready at %s', url)
     try:
         if '--backend-test' in sys.argv:
@@ -121,7 +131,7 @@ def main():
         lock.close()
     if restart.is_set():
         args = [sys.executable] if getattr(sys, 'frozen', False) else [sys.executable, str(Path(__file__).resolve())]
-        args += [arg for arg in sys.argv[1:] if arg == '--no-browser']
+        args += [arg for arg in sys.argv[1:] if arg in ('--no-browser', '--native-desktop')]
         os.execv(sys.executable, args)
 
 

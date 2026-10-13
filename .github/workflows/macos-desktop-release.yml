@@ -1,0 +1,43 @@
+name: Native Intel Mac Desktop
+on:
+  push:
+    branches: [codex/macos-native-desktop]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: macos-native-desktop
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: macos-15-intel
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Build bundled backend and Swift window
+        run: |
+          bash macos/build.sh
+          python3 macos/package_native.py dist/OverMesh.app 'dist/OverMesh Desktop.app'
+      - name: Verify backend
+        run: |
+          OVERMESH_DESKTOP_DATA="$RUNNER_TEMP/backend" dist/OverMesh.app/Contents/MacOS/OverMesh --backend-test
+          OVERMESH_TEST_DIR="$RUNNER_TEMP/lifecycle" .macos-build-env/bin/python macos/test_lifecycle_local.py
+          .macos-build-env/bin/python -m pytest tests/test_settings_app.py tests/test_serial_close_guard.py tests/test_bridge.py -q
+      - name: Verify actual native window and Quit
+        run: OVERMESH_TEST_DIR="$RUNNER_TEMP/native-window" python3 macos/native/verify_window.py 'dist/OverMesh Desktop.app'
+      - name: Save native-window diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-window-diagnostics
+          path: ${{ runner.temp }}/native-window
+      - name: Package and publish Desktop beta
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent 'dist/OverMesh Desktop.app' OverMesh-Desktop-Intel-Joker-v2.1.0-beta1.zip
+          shasum -a 256 OverMesh-Desktop-Intel-Joker-v2.1.0-beta1.zip > SHA256SUMS.txt
+          gh release create macos-desktop-v2.1.0-beta1 OverMesh-Desktop-Intel-Joker-v2.1.0-beta1.zip SHA256SUMS.txt macos/native/README.md --prerelease --target "$GITHUB_SHA" --title 'OverMesh Desktop — Intel Joker beta 1' --notes-file macos/native/README.md
